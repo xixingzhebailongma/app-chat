@@ -7,7 +7,6 @@
 
 // user_spaces 表的一行（见 sql/migration_v1.sql）：一个 (user_id,
 // space_id) 成员关系，用于校验教师对某空间的访问权限。
-// TODO: 使用 PgPool 实现基于 PostgreSQL 的仓库。
 class UserSpacesRepository {
 public:
     virtual ~UserSpacesRepository() = default;

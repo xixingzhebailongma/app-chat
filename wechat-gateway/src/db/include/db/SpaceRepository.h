@@ -12,7 +12,6 @@ struct Space {
     std::string type;  // standard / lecture / office（空间类型，第一级分组）
 };
 
-// TODO: 使用 PgPool 实现基于 PostgreSQL 的仓库。
 class SpaceRepository {
 public:
     virtual ~SpaceRepository() = default;

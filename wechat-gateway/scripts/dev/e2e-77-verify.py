@@ -5,7 +5,7 @@
 设备控制 → 空间同步。每段至少一条成功断言 + 一条失败/边界断言。
 
 前置：
-    python3 scripts/dev/mock-go-backend.py        # 监听 8081
+    python3 scripts/mock-go-backend.py        # 监听 8081
     ./build/wechat-gateway                        # 监听 8080（dev：内存仓库 + mock 渠道）
 
 说明：
@@ -101,9 +101,9 @@ def main():
     s, b = req("POST", "/api/miniapp/bind",
                headers={"Content-Type": "application/json"},
                body={"openid_token": ticket, "username": "admin",
-                     "password": "secret"})
+                     "password": "admin123"})
     print(f"  curl -X POST {GATEWAY}/api/miniapp/bind "
-          f"-d '{{\"openid_token\":\"<crafted>\",\"username\":\"admin\",\"password\":\"secret\"}}'")
+          f"-d '{{\"openid_token\":\"<crafted>\",\"username\":\"admin\",\"password\":\"admin123\"}}'")
     print(f"  -> HTTP {s} {b}")
     admin_jwt = None
     if s == 200:
@@ -114,7 +114,7 @@ def main():
     s, b = req("POST", "/api/miniapp/bind",
                headers={"Content-Type": "application/json"},
                body={"openid_token": "garbage.token.value", "username": "admin",
-                     "password": "secret"})
+                     "password": "admin123"})
     print(f"  -> HTTP {s} {b}")
     check("bind 非法 openid_token 被拒（401）", s == 401,
           f"HTTP {s}")

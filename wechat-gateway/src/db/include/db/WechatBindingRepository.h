@@ -33,8 +33,7 @@ public:
     virtual void save(const WechatBinding& binding) = 0;
 };
 
-// 内存 mock；TODO: 使用与 PgPool 相同的风格实现基于 PostgreSQL 的
-// 仓库（见 sql/migration_v1.sql 中的迁移脚本）。
+// 内存 mock。
 class InMemoryWechatBindingRepository : public WechatBindingRepository {
 public:
     std::optional<WechatBinding> findByOpenid(

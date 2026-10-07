@@ -27,15 +27,16 @@ export default {
   data() {
     return {
       isMock: config.USE_MOCK,
-      username: '',
-      password: '',
+      // mock 演示：预填管理员，点「登录」即进；教师视角可改账号为 li / wang。
+      username: config.USE_MOCK ? 'admin' : '',
+      password: config.USE_MOCK ? 'admin123' : '',
       loading: false,
     }
   },
   computed: {
     tip() {
       return this.isMock
-        ? '演示环境 · 账号 admin / 密码 admin123'
+        ? '演示模式 · 直接登录即可'
         : '请输入账号密码登录'
     },
     submitText() {

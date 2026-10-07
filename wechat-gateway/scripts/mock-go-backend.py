@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""go-backend 服务的本地替身，用于离线开发/测试。
+"""真实 go-backend 就绪前的替身（本地开发/测试用，非生产依赖；
+对外契约以 config/upstream.json 为准）。
 
 精确实现 C++ 网关所调用的接口（见 src/clients/
 GoBackendClient.cpp），从而无需真实 go-backend 即可端到端跑通

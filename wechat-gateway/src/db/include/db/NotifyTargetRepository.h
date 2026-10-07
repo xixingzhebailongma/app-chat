@@ -7,8 +7,6 @@
 
 // 解析通知的收件人 user_id（设计文档 9.4 第 2 步）：
 // 所有拥有某个角色的用户（全局）以及绑定到某空间的教师。
-// TODO: 使用 PgPool 实现基于 PostgreSQL 的仓库（角色数据在
-// go-backend 中；教师是 user_spaces 表中的行）。
 class NotifyTargetRepository {
 public:
     virtual ~NotifyTargetRepository() = default;

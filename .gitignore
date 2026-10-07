@@ -5,6 +5,7 @@
 __pycache__/
 *.pyc
 *.log
+.vscode/
 
 # ===== wechat-gateway（C++ Drogon 网关）=====
 wechat-gateway/build/
@@ -30,6 +31,9 @@ parent-h5/.env
 parent-h5/.env.*
 !parent-h5/.env.example
 !parent-h5/.env.development
+
+# ===== api-tests（边侧 go-backend 接口审计，本地保留、不进仓库）=====
+api-tests/
 
 # ===== 交接资料（单独交付，不进仓库）=====
 miniapp-handover/

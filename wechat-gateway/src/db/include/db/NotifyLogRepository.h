@@ -17,7 +17,6 @@ struct ChannelAttempt {
 };
 
 // 持久化通知分发记录（notify_logs + notify_attempts）。
-// TODO: 实现基于 PostgreSQL 的仓库（见 sql/migration_v1.sql）。
 class NotifyLogRepository {
 public:
     virtual ~NotifyLogRepository() = default;
