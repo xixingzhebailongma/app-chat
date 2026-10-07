@@ -1,0 +1,7 @@
+# 只把 CMakeLists.txt / src/ / config/ 发进构建上下文，排除本地构建产物与依赖。
+.git
+build/
+third_party/
+uploads/
+operation_logs.jsonl
+**/__pycache__/

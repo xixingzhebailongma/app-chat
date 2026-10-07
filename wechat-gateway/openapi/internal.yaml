@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: wechat-gateway 内部接口（/internal/*，软契约，可经 config 调整）
+  version: 1.0.0
+  description: >
+    wechat-gateway（C++ Drogon）对外接口契约。对外契约唯一真源见
+    `docs/小程序接入-as-built-对接清单.md`，内部协议（`/internal/*`）见
+    `docs/接口契约清单.md`，路由注册见 `src/main.cpp`。鉴权分三类：
+
+    - **内部接口**（`/internal/*`）：请求头 `X-Internal-Token`（`InternalTokenFilter`）。
+    - **小程序接口**（`/api/miniapp/*`）：请求头 `Authorization: Bearer <JWT>`（`JwtFilter`）。
+    - **公开接口**：`/api/miniapp/login|bind`、`/api/oa/bind/*`、`/health`。
+
+    统一错误体：`{"error":{"code":"<stable string>","message":"..."}}`。
+    WebSocket：`/ws`（`WsProxyController`，JWT + 空间边界校验后透传边侧 `/ws`），
+    不在本 OpenAPI 的 REST 路径内，单独联调。
+servers:
+  - url: http://localhost:8080
+    description: 本地/内存模式（默认 INTERNAL_TOKEN=dev-internal-token）
+tags:
+  - name: internal
+    description: 内部接口（边侧 / Agent 调用，X-Internal-Token）
+  - name: oa-bind
+    description: 公众号家长绑定（微信 OAuth + openid_token）
+  - name: miniapp
+    description: 小程序接口（Bearer JWT）
+  - name: health
+    description: 存活探测
+
+security:
+  - bearerAuth: []
+
+paths:
+  /internal/notify/send:
+    post:
+      tags: [internal]
+      summary: 告警/事件推送入口（7.7 推送服务）
+      security: [{ internalToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_type, content]
+              properties:
+                event_type: { type: string, example: device_offline }
+                content: { type: string, example: "综合屏离线" }
+                target: { type: object, description: 【已废弃】推送目标（收件人由 PushRule 派生，仅审计回放用，可省略） }
+                event_id: { type: string }
+                space_id: { type: string }
+                device_id: { type: string }
+                device_label: { type: string }
+                severity: { type: string, example: warning }
+                transition: { type: string }
+                duration_sec: { type: integer }
+                consecutive: { type: integer }
+                offline_minutes: { type: integer }
+      responses:
+        "200":
+          $ref: "#/components/responses/Json200"
+        "400": { $ref: "#/components/responses/Error400" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /internal/notify/subscribe-send:
+    post:
+      tags: [internal]
+      summary: 单发小程序订阅消息（一次性）
+      security: [{ internalToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /internal/oa/arrival-notify:
+    post:
+      tags: [internal]
+      summary: 家长到校通知（7.8）
+      security: [{ internalToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [student_no, student_name, space_id, space_name, arrival_time]
+              properties:
+                student_no: { type: string, example: "20260101" }
+                student_name: { type: string, example: "张三" }
+                space_id: { type: string, example: "spc_a8acdd5c" }
+                space_name: { type: string, example: "A101 教室" }
+                arrival_time: { type: string, format: date-time }
+                event_id: { type: string }
+                event_type: { type: string, enum: [arrival, leave] }
+      responses:
+        "200":
+          description: 受理结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: boolean, example: true }
+                  notify_id: { type: string }
+                  final_status: { type: string, enum: [no_parent_binding, skipped, success, failed, duplicate] }
+                  channel: { type: string, enum: [wechat_oa, none] }
+                  reason: { type: string }
+        "400": { $ref: "#/components/responses/Error400" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /internal/user-roles/sync:
+    post:
+      tags: [internal]
+      summary: 角色全量同步（幂等）
+      security: [{ internalToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: { type: string }
+                roles:
+                  type: array
+                  items: { type: string }
+                  description: 全量角色集合；省略或空数组 = 清空该用户全部角色（删除也要同步，不能只增不减）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "400": { $ref: "#/components/responses/Error400" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /internal/access-records:
+    post:
+      tags: [internal]
+      summary: 进出记录回灌（event_id 幂等）
+      security: [{ internalToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, space_id, occurred_at]
+              properties:
+                event_id: { type: string }
+                space_id: { type: string }
+                occurred_at: { type: string, format: date-time }
+                user_id: { type: string }
+                name: { type: string }
+                auth_type: { type: string }
+                result: { type: string }
+                device_id: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /internal/spaces/sync:
+    post:
+      tags: [internal]
+      summary: 空间生命周期同步（必须全量列表）
+      security: [{ internalToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [spaces]
+              properties:
+                spaces:
+                  type: array
+                  items:
+                    type: object
+                    required: [space_id, name, type]
+                    properties:
+                      space_id: { type: string }
+                      name: { type: string }
+                      type: { type: string }
+      responses:
+        "200":
+          description: 对账结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  upserted: { type: integer }
+                  removed: { type: integer }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /internal/student-parents/sync:
+    post:
+      tags: [internal]
+      summary: 学生花名册全量同步（必须全量列表）
+      security: [{ internalToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parents]
+              properties:
+                parents:
+                  type: array
+                  items:
+                    type: object
+                    required: [student_no, parent_phone, student_name, relation, status]
+                    properties:
+                      student_no: { type: string }
+                      parent_phone: { type: string }
+                      student_name: { type: string }
+                      relation: { type: string }
+                      status: { type: string, enum: [active, inactive] }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  # ============================ 公众号家长绑定 ============================
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: 内部接口令牌（INTERNAL_TOKEN 环境变量）
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 小程序 JWT（登录/绑定签发）
+
+  responses:
+    Json200:
+      description: OK（JSON 对象）
+      content:
+        application/json:
+          schema:
+            type: object
+    Error400:
+      description: 参数缺失/格式非法
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error401:
+      description: 鉴权失败
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error403:
+      description: 无权限
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error404:
+      description: 不存在
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error428:
+      description: 需二次确认
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error429:
+      description: 频率限制
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error503:
+      description: 边侧不可达
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: 稳定错误码，见 config/error_codes.json —— 400 INVALID_REQUEST、401 UNAUTHORIZED、403 FORBIDDEN、404 NOT_FOUND、428 CONFIRM_REQUIRED、429 RATE_LIMITED、500 INTERNAL_ERROR、503 UPSTREAM_UNAVAILABLE（设备控制路径显式用 GO_BACKEND_UNAVAILABLE）
+            message: { type: string }

@@ -1,0 +1,13 @@
+{
+  "error": {
+    "wrapper": "error",
+    "code_key": "code",
+    "message_key": "message"
+  },
+  "success": {
+    "wrapper": "",
+    "code_key": "code",
+    "message_key": "message",
+    "code_value": 0
+  }
+}

@@ -1,0 +1,36 @@
+# ===== 通用 =====
+.DS_Store
+*~
+*.swp
+__pycache__/
+*.pyc
+*.log
+
+# ===== wechat-gateway（C++ Drogon 网关）=====
+wechat-gateway/build/
+wechat-gateway/Testing/
+wechat-gateway/third_party/
+wechat-gateway/uploads/
+wechat-gateway/operation_logs.jsonl
+# 测试代码：本地保留、不进仓库
+wechat-gateway/tests/
+
+# ===== miniapp（uni-app 小程序）=====
+miniapp/node_modules/
+miniapp/dist/
+miniapp/tests/
+miniapp/.env
+miniapp/.env.*
+!miniapp/.env.example
+
+# ===== parent-h5（家长绑定 H5）=====
+parent-h5/node_modules/
+parent-h5/dist/
+parent-h5/.env
+parent-h5/.env.*
+!parent-h5/.env.example
+!parent-h5/.env.development
+
+# ===== 交接资料（单独交付，不进仓库）=====
+miniapp-handover/
+miniapp-handover-*.zip

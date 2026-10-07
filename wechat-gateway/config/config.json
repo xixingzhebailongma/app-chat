@@ -1,0 +1,102 @@
+{
+  "custom_config": {
+    "listen_port": 8080,
+    "internal_token": "dev-internal-token",
+    "jwt": {
+      "secret": "dev-shared-jwt-secret",
+      "access_ttl_seconds": 259200,
+      "openid_ttl_seconds": 300
+    },
+    "wechat": {
+      "api_base_url": "https://api.weixin.qq.com",
+      "miniapp": {
+        "appid": "dev-miniapp-appid",
+        "secret": "dev-miniapp-secret"
+      },
+      "oa": {
+        "appid": "dev-oa-appid",
+        "secret": "dev-oa-secret"
+      }
+    },
+    "go_backend": {
+      "base_url": "http://127.0.0.1:8081",
+      "api_prefix": "/api"
+    },
+    "redis": {
+      "host": "",
+      "port": 6379,
+      "password": ""
+    },
+    "postgres": {
+      "conninfo": ""
+    },
+    "operation_log": {
+      "file": "operation_logs.jsonl"
+    },
+    "notify": {
+      "channels": {
+        "wechat_miniapp": {
+          "enabled": true,
+          "mode": "mock",
+          "templates": {
+            "device_offline":     { "id": "tmpl_001", "type": "one_time", "fields": { "thing1": "{device_label} 已离线" } },
+            "peripheral_offline": { "id": "tmpl_001", "type": "one_time", "fields": { "thing1": "{device_label} 离线" } },
+            "sensor_threshold":   { "id": "tmpl_002", "type": "one_time", "fields": { "thing1": "{content}" } },
+            "face_login_failed":  { "id": "tmpl_003", "type": "one_time", "fields": { "thing1": "{content}" } }
+          }
+        },
+        "dingtalk": {
+          "enabled": false
+        },
+        "wecom": {
+          "enabled": false
+        },
+        "sms": {
+          "enabled": true,
+          "mode": "mock",
+          "provider": "aliyun",
+          "access_key": "${SMS_ACCESS_KEY}",
+          "secret": "${SMS_SECRET}",
+          "region": "cn-hangzhou",
+          "sdk_app_id": "1400000000",
+          "sign_name": "智慧校园",
+          "templates": {
+            "device_offline":     { "code": "SMS_123456", "params": { "name": "{device_label}" } },
+            "sensor_threshold":   { "code": "SMS_123457", "params": { "content": "{content}" } },
+            "face_login_failed":  { "code": "SMS_123458", "params": { "content": "{content}" } },
+            "peripheral_offline": { "code": "SMS_123459", "params": { "name": "{device_label}" } }
+          }
+        }
+      },
+      "routing": {
+        "default": ["wechat_miniapp"]
+      },
+      "cooldown": {
+        "default_seconds": 1800
+      },
+      "fallback": {
+        "enabled": true,
+        "channel": "sms"
+      },
+      "oa": {
+        "mode": "mock",
+        "arrival_template_id": "tmpl_arrival",
+        "notify_once_per_day": true,
+        "notify_on_leave": false,
+        "sms": {
+          "mode": "mock",
+          "template_code": "SMS_OA_CODE",
+          "code_param": "code"
+        }
+      },
+      "retry": {
+        "max_attempts": 5,
+        "base_delay_seconds": 60,
+        "max_delay_seconds": 1800,
+        "jitter_ratio": 0.2,
+        "poll_interval_seconds": 1,
+        "batch_size": 50
+      }
+    }
+  }
+}

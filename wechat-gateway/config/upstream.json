@@ -1,0 +1,37 @@
+{
+  "login": {
+    "path": "/auth/login",
+    "request": {
+      "username": "username",
+      "password": "password"
+    },
+    "response": {
+      "user_key": "user",
+      "user_id": "user_id",
+      "username": "username",
+      "name": "name",
+      "role": "role"
+    }
+  },
+  "user_phone": {
+    "path": "/users/{user_id}",
+    "internal_token_header": "X-Internal-Token",
+    "response": {
+      "phone": "phone"
+    }
+  },
+  "devices": {
+    "list_path": "/devices",
+    "list_query_space_id": "space_id",
+    "control_path": "/devices/{device_type}/{device_id}/cmd",
+    "control_request": {
+      "command": "command"
+    },
+    "device_fields": {
+      "device_id": "device_id",
+      "device_type": "device_type",
+      "label": "label"
+    }
+  },
+  "ws_path": "/ws"
+}

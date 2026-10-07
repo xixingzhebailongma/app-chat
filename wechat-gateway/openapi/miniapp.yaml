@@ -1,0 +1,625 @@
+openapi: 3.0.3
+info:
+  title: wechat-gateway 对外接口（/api/*，硬契约，前端用）
+  version: 1.0.0
+  description: >
+    wechat-gateway（C++ Drogon）对外接口契约。对外契约唯一真源见
+    `docs/小程序接入-as-built-对接清单.md`，内部协议（`/internal/*`）见
+    `docs/接口契约清单.md`，路由注册见 `src/main.cpp`。鉴权分三类：
+
+    - **内部接口**（`/internal/*`）：请求头 `X-Internal-Token`（`InternalTokenFilter`）。
+    - **小程序接口**（`/api/miniapp/*`）：请求头 `Authorization: Bearer <JWT>`（`JwtFilter`）。
+    - **公开接口**：`/api/miniapp/login|bind`、`/api/oa/bind/*`、`/health`。
+
+    统一错误体：`{"error":{"code":"<stable string>","message":"..."}}`。
+    WebSocket：`/ws`（`WsProxyController`，JWT + 空间边界校验后透传边侧 `/ws`），
+    不在本 OpenAPI 的 REST 路径内，单独联调。
+servers:
+  - url: http://localhost:8080
+    description: 本地/内存模式（默认 INTERNAL_TOKEN=dev-internal-token）
+tags:
+  - name: internal
+    description: 内部接口（边侧 / Agent 调用，X-Internal-Token）
+  - name: oa-bind
+    description: 公众号家长绑定（微信 OAuth + openid_token）
+  - name: miniapp
+    description: 小程序接口（Bearer JWT）
+  - name: health
+    description: 存活探测
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: 存活探测（K8s livenessProbe / 对接方探活）
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  service: { type: string, example: wechat-gateway }
+
+  # ============================ 内部接口 ============================
+  /api/oa/bind/authorize:
+    get:
+      tags: [oa-bind]
+      summary: 网页授权 code 换 openid + openid_token
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+          description: 微信 OAuth 回跳 code
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  openid: { type: string }
+                  openid_token: { type: string }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /api/oa/bind/send-code:
+    post:
+      tags: [oa-bind]
+      summary: 发送短信验证码
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string, description: 11 位手机号, example: "13800000000" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: boolean, example: true }
+        "429": { $ref: "#/components/responses/Error429" }
+
+  /api/oa/bind/confirm:
+    post:
+      tags: [oa-bind]
+      summary: 校验并持久化绑定
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openid_token, student_no, phone, sms_code]
+              properties:
+                openid_token: { type: string }
+                student_no: { type: string }
+                phone: { type: string }
+                sms_code: { type: string }
+      responses:
+        "200":
+          description: 绑定成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bound: { type: boolean, example: true }
+                  student_no: { type: string }
+                  phone: { type: string }
+        "400": { $ref: "#/components/responses/Error400" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /api/oa/bind/me:
+    get:
+      tags: [oa-bind]
+      summary: 查当前 openid 已绑定孩子列表（多孩子）
+      security: []
+      parameters:
+        - name: openid_token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 绑定列表（未绑定 bound:false + 空数组）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bound: { type: boolean }
+                  bindings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        student_no: { type: string }
+                        student_name: { type: string, description: 后端 join 花名册，缺失省略 }
+                        phone: { type: string }
+                        bound_at: { type: string, description: 取自 verified_at（ISO） }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /api/oa/bind/unbind:
+    post:
+      tags: [oa-bind]
+      summary: 删除指定学号绑定
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openid_token, student_no]
+              properties:
+                openid_token: { type: string }
+                student_no: { type: string }
+      responses:
+        "200":
+          description: 解绑成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unbound: { type: boolean, example: true }
+                  student_no: { type: string }
+        "401": { $ref: "#/components/responses/Error401" }
+        "404": { $ref: "#/components/responses/Error404" }
+
+  # ============================ 小程序登录/绑定 ============================
+  /api/miniapp/login:
+    post:
+      tags: [miniapp]
+      summary: 小程序登录（wx.login code）
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          description: 已绑定返回 JWT；未绑定返回 need_bind
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user_id: { type: string }
+                  role: { type: string }
+                  name: { type: string }
+                  need_bind: { type: boolean }
+                  openid_token: { type: string }
+
+  /api/miniapp/bind:
+    post:
+      tags: [miniapp]
+      summary: 账号绑定（go-backend 校验后签发 JWT）
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openid_token, username, password]
+              properties:
+                openid_token: { type: string }
+                username: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user_id: { type: string }
+                  role: { type: string }
+                  name: { type: string }
+
+  # ============================ 小程序鉴权后接口 ============================
+  /api/miniapp/me:
+    get:
+      tags: [miniapp]
+      summary: 回显当前用户身份
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: { type: string }
+                  role: { type: string }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /api/miniapp/devices:
+    get:
+      tags: [miniapp]
+      summary: 设备列表（代理边侧，空间边界）
+      parameters:
+        - name: space_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK（包装为 {"devices":[...]}）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices: { type: array, items: { type: object } }
+        "403": { $ref: "#/components/responses/Error403" }
+        "503": { $ref: "#/components/responses/Error503" }
+
+  /api/miniapp/spaces:
+    get:
+      tags: [miniapp]
+      summary: 空间列表（admin 全部 / teacher 绑定空间）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /api/miniapp/device/control:
+    post:
+      tags: [miniapp]
+      summary: 设备控制（on/off/toggle；门禁 off 需 confirm）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [space_id, device_type, device_id, command]
+              properties:
+                space_id: { type: string }
+                device_type: { type: string }
+                device_id: { type: string }
+                command: { type: string, enum: [on, off, toggle] }
+                confirm: { type: boolean, description: 门禁 off 必填 }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "400": { $ref: "#/components/responses/Error400" }
+        "403": { $ref: "#/components/responses/Error403" }
+        "428": { $ref: "#/components/responses/Error428" }
+        "503": { $ref: "#/components/responses/Error503" }
+
+  /api/miniapp/scene/execute:
+    post:
+      tags: [miniapp]
+      summary: 场景一键控制
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [space_id, scene_id]
+              properties:
+                space_id: { type: string }
+                scene_id: { type: string, enum: [lesson_on, lesson_off] }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+
+  /api/miniapp/alerts:
+    get:
+      tags: [miniapp]
+      summary: 告警列表（非 admin 隐藏 operator/remark）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /api/miniapp/alerts/{id}:
+    get:
+      tags: [miniapp]
+      summary: 告警详情（{id}=alert_id；教师越权与不存在统一 404）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "401": { $ref: "#/components/responses/Error401" }
+        "404": { $ref: "#/components/responses/Error404" }
+
+  /api/miniapp/alerts/{id}/handle:
+    post:
+      tags: [miniapp]
+      summary: 标记告警处理（admin only）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [handling, resolved] }
+                remark: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+
+  /api/miniapp/alerts/{id}/timeline:
+    get:
+      tags: [miniapp]
+      summary: 告警处理时间线（admin only）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+
+  /api/miniapp/alerts/stats:
+    get:
+      tags: [miniapp]
+      summary: 告警统计（admin 才有 by_space 维度）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+
+  /api/miniapp/subscribe:
+    get:
+      tags: [miniapp]
+      summary: 订阅额度回显
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+    post:
+      tags: [miniapp]
+      summary: 订阅授权
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                accepted_templates:
+                  type: array
+                  items:
+                    type: string
+                unsubscribe_all: { type: boolean }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+
+  /api/miniapp/notify/templates:
+    get:
+      tags: [miniapp]
+      summary: 去重后的订阅模板 ID 集合（前端拿去 wx.requestSubscribeMessage）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "401": { $ref: "#/components/responses/Error401" }
+
+  /api/miniapp/space-bindings:
+    get:
+      tags: [miniapp]
+      summary: 教师↔教室绑定列表（admin only）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+    post:
+      tags: [miniapp]
+      summary: 新增绑定（admin only）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, space_id]
+              properties:
+                user_id: { type: string }
+                space_id: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+    delete:
+      tags: [miniapp]
+      summary: 删除绑定（admin only）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string }
+                space_id: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+
+  /api/notify/bindings:
+    get:
+      tags: [miniapp]
+      summary: 通知目标绑定列表（admin）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+    post:
+      tags: [miniapp]
+      summary: 导入 user_id → 渠道外部 ID 映射（admin）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+    delete:
+      tags: [miniapp]
+      summary: 删除通知目标绑定（admin）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+
+  /api/miniapp/access-records:
+    get:
+      tags: [miniapp]
+      summary: 进出记录（空间边界）
+      parameters:
+        - name: auth_type
+          in: query
+          required: false
+          schema: { type: string, enum: [face, card] }
+          description: 可选；face/card，空=不过滤，非法值返回 400
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+
+  /api/miniapp/operation-logs:
+    get:
+      tags: [miniapp]
+      summary: 运维日志（admin）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+
+  /api/miniapp/door-devices:
+    get:
+      tags: [miniapp]
+      summary: 门禁白名单列表
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+    post:
+      tags: [miniapp]
+      summary: 标记为门禁（admin only）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, space_id, label]
+              properties:
+                device_id: { type: string }
+                space_id: { type: string }
+                label: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+    delete:
+      tags: [miniapp]
+      summary: 取消门禁标记（admin only）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_id: { type: string }
+                space_id: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: 内部接口令牌（INTERNAL_TOKEN 环境变量）
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 小程序 JWT（登录/绑定签发）
+
+  responses:
+    Json200:
+      description: OK（JSON 对象）
+      content:
+        application/json:
+          schema:
+            type: object
+    Error400:
+      description: 参数缺失/格式非法
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error401:
+      description: 鉴权失败
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error403:
+      description: 无权限
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error404:
+      description: 不存在
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error428:
+      description: 需二次确认
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error429:
+      description: 频率限制
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error503:
+      description: 边侧不可达
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: 稳定错误码，见 config/error_codes.json —— 400 INVALID_REQUEST、401 UNAUTHORIZED、403 FORBIDDEN、404 NOT_FOUND、428 CONFIRM_REQUIRED、429 RATE_LIMITED、500 INTERNAL_ERROR、503 UPSTREAM_UNAVAILABLE（设备控制路径显式用 GO_BACKEND_UNAVAILABLE）
+            message: { type: string }
