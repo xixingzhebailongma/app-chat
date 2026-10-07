@@ -1,6 +1,7 @@
 #include "services/RetryWorker.h"
 
-#include <cstdio>
+#include <trantor/utils/Logger.h>
+
 #include <random>
 #include <utility>
 
@@ -69,26 +70,21 @@ void RetryWorker::run() {
 
             if (outcome.delivered) {
                 repo_->markSuccess(e.id);
-                std::fprintf(stderr,
-                             "[retry] event_id=%s attempt=%d result=delivered\n",
-                             event_id.c_str(), attempt);
+                LOG_INFO << "[retry] event_id=" << event_id
+                         << " attempt=" << attempt << " result=delivered";
             } else if (e.retry_count + 1 >= cfg_.max_attempts) {
                 repo_->markDeadLetter(e.id, outcome.error);
-                std::fprintf(stderr,
-                             "[retry] event_id=%s attempt=%d result=dead_letter"
-                             " failed=%s error=%s\n",
-                             event_id.c_str(), attempt,
-                             outcome.failed_detail.c_str(),
-                             outcome.error.c_str());
+                LOG_WARN << "[retry] event_id=" << event_id
+                         << " attempt=" << attempt
+                         << " result=dead_letter failed=" << outcome.failed_detail
+                         << " error=" << outcome.error;
             } else {
                 repo_->markRetry(e.id, backoff(e.retry_count).count(),
                                  outcome.error);
-                std::fprintf(stderr,
-                             "[retry] event_id=%s attempt=%d result=failed"
-                             " failed=%s error=%s\n",
-                             event_id.c_str(), attempt,
-                             outcome.failed_detail.c_str(),
-                             outcome.error.c_str());
+                LOG_WARN << "[retry] event_id=" << event_id
+                         << " attempt=" << attempt
+                         << " result=failed failed=" << outcome.failed_detail
+                         << " error=" << outcome.error;
             }
         }
     }

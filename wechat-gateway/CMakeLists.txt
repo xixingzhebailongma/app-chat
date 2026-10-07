@@ -67,12 +67,6 @@ set(GATEWAY_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dto/include
 )
 
-# IUpstreamGateway 参考 Mock（联调方可直接 link 的独立 target）。
-add_library(mock_upstream_gateway INTERFACE)
-target_include_directories(mock_upstream_gateway INTERFACE ${GATEWAY_INCLUDE_DIRS})
-target_link_libraries(mock_upstream_gateway INTERFACE
-    Drogon::Drogon nlohmann_json::nlohmann_json)
-
 # Explicit source list (skeleton's empty .cpp files are intentionally excluded).
 add_executable(wechat-gateway
     src/main.cpp
@@ -156,7 +150,7 @@ add_executable(retry_test
     src/db/src/PendingEventRepository.cpp
 )
 target_include_directories(retry_test PRIVATE ${GATEWAY_INCLUDE_DIRS})
-target_link_libraries(retry_test PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(retry_test PRIVATE Drogon::Drogon nlohmann_json::nlohmann_json)
 add_test(NAME retry_test COMMAND retry_test)
 
 # 微信订阅消息渠道单测 —— 注入脚本化 transporter + 内存 Redis 预置 token，
@@ -330,7 +324,7 @@ if (PostgreSQL_FOUND)
     target_include_directories(pg_retry_test PRIVATE
         ${GATEWAY_INCLUDE_DIRS} ${PostgreSQL_INCLUDE_DIRS})
     target_link_libraries(pg_retry_test PRIVATE
-        nlohmann_json::nlohmann_json ${PostgreSQL_LIBRARIES})
+        Drogon::Drogon nlohmann_json::nlohmann_json ${PostgreSQL_LIBRARIES})
     add_test(NAME pg_retry_test COMMAND pg_retry_test)
 
     add_executable(pg_repos_test
