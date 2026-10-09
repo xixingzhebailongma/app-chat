@@ -115,7 +115,7 @@
 <script>
 import { api } from '../../api/index'
 import { store, isLoggedIn } from '../../store/index'
-import { deviceTypeLabel, spaceTypeLabel, orderedSpaceTypeKeys } from '../../utils/format'
+import { deviceTypeLabel, spaceTypeLabel } from '../../utils/format'
 import { deviceTypeIcon } from '../../utils/icon'
 import { controlErrorMessage } from '../../utils/controlError'
 import { connectWs, closeWs } from '../../utils/ws'
@@ -129,6 +129,7 @@ export default {
     return {
       store,
       spaces: [],
+      typeDefs: [],
       currentType: '',
       current: 'all',
       requestedType: '',
@@ -149,13 +150,23 @@ export default {
       return store.role === 'admin'
     },
     typeTabs() {
-      return orderedSpaceTypeKeys(this.spaces.map((s) => s.type)).map((t) => ({
-        key: t,
-        label: spaceTypeLabel(t),
+      // tab 集合来自空间自身 type（教师只看到自己空间里的类型）；label/顺序
+      // 优先取服务端 typeDefs，未命中回退 format.js 硬编码。读接口返回含停用，
+      // 故停用类型只要还有空间在用就仍显示（不做 enabled 过滤）。
+      const codes = [...new Set(this.spaces.map((s) => s.type))]
+      const byCode = {}
+      this.typeDefs.forEach((t) => { byCode[t.code] = t })
+      const known = codes.filter((c) => byCode[c])
+      const rest = codes.filter((c) => !byCode[c]).sort()
+      known.sort((a, b) => ((byCode[a].sort_order ?? 0) - (byCode[b].sort_order ?? 0)))
+      return known.concat(rest).map((c) => ({
+        key: c,
+        label: byCode[c] ? byCode[c].name : spaceTypeLabel(c),
       }))
     },
     currentTypeLabel() {
-      return spaceTypeLabel(this.currentType)
+      const t = this.typeDefs.find((x) => x.code === this.currentType)
+      return t ? t.name : spaceTypeLabel(this.currentType)
     },
     spaceTabs() {
       const rooms = this.spaces.filter((s) => s.type === this.currentType)
@@ -243,8 +254,9 @@ export default {
     },
     async load() {
       try {
-        const spaces = await api.spaces()
+        const [spaces, typeDefs] = await Promise.all([api.spaces(), api.spaceTypes()])
         this.spaces = spaces
+        this.typeDefs = typeDefs || []
         let type = this.typeTabs.length ? this.typeTabs[0].key : ''
         if (this.requestedType && this.typeTabs.some((t) => t.key === this.requestedType)) {
           type = this.requestedType

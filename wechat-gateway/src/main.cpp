@@ -33,6 +33,7 @@
 #include "controllers/SpaceBindingController.h"
 #include "controllers/NotifyBindingController.h"
 #include "controllers/SpaceController.h"
+#include "controllers/SpaceTypeController.h"
 #include "controllers/SpaceSyncController.h"
 #include "controllers/StudentParentSyncController.h"
 #include "controllers/SubscribeNotifyController.h"
@@ -60,6 +61,7 @@
 #include "db/PgPendingEventRepository.h"
 #include "db/PgPool.h"
 #include "db/PgSpaceRepository.h"
+#include "db/PgSpaceTypeRepository.h"
 #include "db/PgStudentParentRepository.h"
 #include "db/PgSubscriptionRepository.h"
 #include "db/PgNotifyTargetResolver.h"
@@ -68,6 +70,7 @@
 #include "db/PgWechatBindingRepository.h"
 #include "db/RedisClient.h"
 #include "db/SpaceRepository.h"
+#include "db/SpaceTypeRepository.h"
 #include "db/StudentParentRepository.h"
 #include "db/SubscriptionRepository.h"
 #include "db/UserRoleRepository.h"
@@ -92,6 +95,7 @@
 #include "services/NotifyBindingService.h"
 #include "services/SpaceService.h"
 #include "services/SpaceSyncService.h"
+#include "services/SpaceTypeService.h"
 #include "services/StudentParentSyncService.h"
 #include "services/SubscriptionService.h"
 #include "dto/NotifySendDto.h"
@@ -355,6 +359,7 @@ int main() {
     std::shared_ptr<StudentParentRepository> studentParentRepo;
     std::shared_ptr<AlertRepository> alertRepo;
     std::shared_ptr<DoorDeviceRepository> doorDeviceRepo;  // 门禁白名单（7.5③）
+    std::shared_ptr<SpaceTypeRepository> spaceTypeRepo;    // 空间类型（自定义类型标签）
     std::shared_ptr<SubscriptionRepository> subscriptionRepo;
     std::shared_ptr<WechatBindingRepository> wechatBindingRepo;
     std::shared_ptr<UserRoleRepository> userRoleRepo;
@@ -375,6 +380,7 @@ int main() {
         oaNotifyLogRepo = std::make_shared<PgOaNotifyLogRepository>(pgPool);
         userSpacesRepo = std::make_shared<PgUserSpacesRepository>(pgPool);
         spaceRepo = std::make_shared<PgSpaceRepository>(pgPool);
+        spaceTypeRepo = std::make_shared<PgSpaceTypeRepository>(pgPool);
         studentParentRepo = std::make_shared<PgStudentParentRepository>(pgPool);
         alertRepo = std::make_shared<PgAlertRepository>(pgPool);
         doorDeviceRepo = std::make_shared<PgDoorDeviceRepository>(pgPool);
@@ -418,6 +424,19 @@ int main() {
             spacesMem->add(Space{"spc_std_a102", "A102 教室", "standard"});
             spacesMem->add(Space{"spc_b7bee44d", "多媒体报告厅", "lecture"});
             spaceRepo = spacesMem;
+        }
+        {
+            // 空间类型种子（对齐 sql/migration_v15.sql 的 7 条），使设备页类型
+            // tab 在纯内存模式下可演示。
+            auto spaceTypesMem = std::make_shared<InMemorySpaceTypeRepository>();
+            spaceTypesMem->add(SpaceType{"standard", "标准教室", 0, true, ""});
+            spaceTypesMem->add(SpaceType{"lecture", "多媒体报告厅", 1, true, ""});
+            spaceTypesMem->add(SpaceType{"office", "办公室", 2, true, ""});
+            spaceTypesMem->add(SpaceType{"gym", "体育馆", 3, true, ""});
+            spaceTypesMem->add(SpaceType{"lab", "实验室", 4, true, ""});
+            spaceTypesMem->add(SpaceType{"library", "图书馆", 5, true, ""});
+            spaceTypesMem->add(SpaceType{"canteen", "食堂", 6, true, ""});
+            spaceTypeRepo = spaceTypesMem;
         }
         {
             // 操作人姓名种子（对齐 sql/seed_dev.sql 的 wechat_bindings.name）。
@@ -766,6 +785,7 @@ int main() {
         std::make_shared<OperationLogService>(operationLogRepo);
     auto doorDeviceService = std::make_shared<DoorDeviceService>(
         doorDeviceRepo, userSpacesRepo, operationLogRepo, operationLogFile);
+    auto spaceTypeService = std::make_shared<SpaceTypeService>(spaceTypeRepo);
     auto notifyBindingService =
         std::make_shared<NotifyBindingService>(notifyBindingRepo);
 
@@ -788,6 +808,8 @@ int main() {
         std::make_shared<OperationLogController>(operationLogService);
     auto doorDeviceCtrl =
         std::make_shared<DoorDeviceController>(doorDeviceService);
+    auto spaceTypeCtrl =
+        std::make_shared<SpaceTypeController>(spaceTypeService);
     auto subscribeNotifyCtrl =
         std::make_shared<SubscribeNotifyController>(miniappChannel);
     auto userRoleCtrl = std::make_shared<UserRoleController>(userRoleRepo);
@@ -1146,6 +1168,46 @@ int main() {
             doorDeviceCtrl->unmark(req, std::move(cb));
         },
         {Delete, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/miniapp/space-types",
+        [spaceTypeCtrl](const HttpRequestPtr& req,
+                        std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceTypeCtrl->list(req, std::move(cb));
+        },
+        {Get, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/space-types",
+        [spaceTypeCtrl](const HttpRequestPtr& req,
+                        std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceTypeCtrl->create(req, std::move(cb));
+        },
+        {Post, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/space-types/{code}",
+        [spaceTypeCtrl](const HttpRequestPtr& req,
+                        std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceTypeCtrl->update(req, std::move(cb));
+        },
+        {Put, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/space-types/{code}",
+        [spaceTypeCtrl](const HttpRequestPtr& req,
+                        std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceTypeCtrl->disable(req, std::move(cb));
+        },
+        {Delete, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/space-types/order",
+        [spaceTypeCtrl](const HttpRequestPtr& req,
+                        std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceTypeCtrl->reorder(req, std::move(cb));
+        },
+        {Patch, std::string("JwtFilter")});
 
     LOG_INFO << "wechat-gateway listening on 0.0.0.0:" << port;
     app().run();

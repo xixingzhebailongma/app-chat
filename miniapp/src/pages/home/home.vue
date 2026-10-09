@@ -47,6 +47,11 @@
         <text class="m-label">进出记录</text>
         <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
       </view>
+      <view class="list-cell list-cell-center" hover-class="cell-hover" @tap="goManage('space-types')">
+        <view class="m-icon"><uni-icons type="gear" size="20" color="var(--text-2)" /></view>
+        <text class="m-label">空间类型</text>
+        <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
+      </view>
     </view>
 
     <!-- 教室列表（有告警高亮） -->
@@ -80,7 +85,7 @@
         :key="a.alert_id"
         class="list-cell"
         hover-class="cell-hover"
-        @tap="go('alerts')"
+        @tap="goAlert(a)"
       >
         <view class="a-icon"><uni-icons :type="eventTypeIcon(a.event_type)" size="20" color="var(--text-2)" /></view>
         <view class="alert-main">
@@ -226,10 +231,16 @@ export default {
         uni.navigateTo({ url: '/pages/admin/space-bindings' })
       } else if (type === 'records') {
         uni.navigateTo({ url: '/pages/records/records' })
+      } else if (type === 'space-types') {
+        uni.navigateTo({ url: '/pages/admin/space-types' })
       }
     },
     goClassroom(spaceId) {
       uni.navigateTo({ url: '/pages/devices/devices?space_id=' + encodeURIComponent(spaceId) })
+    },
+    goAlert(a) {
+      // 单条告警直达详情：先入告警列表再透传 goto，返回时依次回到告警列表 → 首页。
+      uni.navigateTo({ url: '/pages/alerts/alerts?goto=' + encodeURIComponent(a.alert_id) })
     },
   },
 }

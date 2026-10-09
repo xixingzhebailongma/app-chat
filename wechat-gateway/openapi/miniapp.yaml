@@ -556,6 +556,89 @@ paths:
         "200": { $ref: "#/components/responses/Json200" }
         "403": { $ref: "#/components/responses/Error403" }
 
+  /api/miniapp/space-types:
+    get:
+      tags: [miniapp]
+      summary: 空间类型列表（登录可读，返回全部含停用，按 sort_order）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+
+  /api/admin/space-types:
+    post:
+      tags: [miniapp]
+      summary: 新增空间类型（admin only；sort_order 缺省排最后）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                icon: { type: string }
+                sort_order: { type: integer }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+        "409": { $ref: "#/components/responses/Error409" }
+
+  /api/admin/space-types/{code}:
+    put:
+      tags: [miniapp]
+      summary: 更新空间类型 name/icon/enabled（admin only）
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                icon: { type: string }
+                enabled: { type: boolean }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+        "404": { $ref: "#/components/responses/Error404" }
+    delete:
+      tags: [miniapp]
+      summary: 停用空间类型（admin only，软删除 enabled=false）
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+        "404": { $ref: "#/components/responses/Error404" }
+
+  /api/admin/space-types/order:
+    patch:
+      tags: [miniapp]
+      summary: 重排空间类型（admin only，按数组下标写 sort_order）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [codes]
+              properties:
+                codes:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+
 components:
   securitySchemes:
     internalToken:
@@ -596,6 +679,11 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
+    Error409:
+      description: 冲突（code 已存在）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
     Error428:
       description: 需二次确认
       content:
@@ -621,5 +709,5 @@ components:
           properties:
             code:
               type: string
-              description: 稳定错误码，见 config/error_codes.json —— 400 INVALID_REQUEST、401 UNAUTHORIZED、403 FORBIDDEN、404 NOT_FOUND、428 CONFIRM_REQUIRED、429 RATE_LIMITED、500 INTERNAL_ERROR、503 UPSTREAM_UNAVAILABLE（设备控制路径显式用 GO_BACKEND_UNAVAILABLE）
+              description: 稳定错误码，见 config/error_codes.json —— 400 INVALID_REQUEST、401 UNAUTHORIZED、403 FORBIDDEN、404 NOT_FOUND、409 CONFLICT、428 CONFIRM_REQUIRED、429 RATE_LIMITED、500 INTERNAL_ERROR、503 UPSTREAM_UNAVAILABLE（设备控制路径显式用 GO_BACKEND_UNAVAILABLE）
             message: { type: string }

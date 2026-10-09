@@ -85,6 +85,16 @@
         "enablePullDownRefresh": true,
         "backgroundColor": "#f5f7fa"
       }
+    },
+    {
+      "path": "pages/admin/space-types",
+      "style": {
+        "navigationBarTitleText": "空间类型管理",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black",
+        "enablePullDownRefresh": true,
+        "backgroundColor": "#f5f7fa"
+      }
     }
   ],
   "globalStyle": {

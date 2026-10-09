@@ -201,4 +201,42 @@ export const api = {
       ? mockApi.alertStats()
       : request({ url: base() + '/api/miniapp/alerts/stats' })
   },
+
+  // 空间类型（读：登录可读；写：仅 admin）
+  spaceTypes() {
+    return useMock()
+      ? mockApi.spaceTypes()
+      : request({ url: base() + '/api/miniapp/space-types' }).then((res) => (res && res.types) || [])
+  },
+  createSpaceType(payload) {
+    return useMock()
+      ? mockApi.createSpaceType(payload)
+      : request({ url: base() + '/api/admin/space-types', method: 'POST', data: payload })
+  },
+  updateSpaceType(code, payload) {
+    return useMock()
+      ? mockApi.updateSpaceType(code, payload)
+      : request({
+          url: base() + '/api/admin/space-types/' + encodeURIComponent(code),
+          method: 'PUT',
+          data: payload,
+        })
+  },
+  disableSpaceType(code) {
+    return useMock()
+      ? mockApi.disableSpaceType(code)
+      : request({
+          url: base() + '/api/admin/space-types/' + encodeURIComponent(code),
+          method: 'DELETE',
+        })
+  },
+  reorderSpaceTypes(codes) {
+    return useMock()
+      ? mockApi.reorderSpaceTypes(codes)
+      : request({
+          url: base() + '/api/admin/space-types/order',
+          method: 'PATCH',
+          data: { codes },
+        })
+  },
 }

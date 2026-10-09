@@ -22,7 +22,7 @@ const devices = {
   spc_a8acdd5c: [
     { device_id: 'dev_c2936745', label: '教室照明', type: 'light', online: true },
     { device_id: 'dev_1a2b3c4d', label: '电子班牌', type: 'sign', online: true },
-    { device_id: 'dev_9f8e7d6c', label: '综合屏', type: 'screen', online: true },
+    { device_id: 'dev_9f8e7d6c', label: '综合屏', type: 'screen', online: false },
     { device_id: 'dev_d0or_a101', label: '前门门禁', type: 'door', online: true },
     { device_id: 'dev_sens_a101', label: '环境传感器', type: 'sensor', online: true },
   ],
@@ -40,7 +40,7 @@ const devices = {
   ],
   spc_office_1: [
     { device_id: 'dev_off_light', label: '办公区照明', type: 'light', online: true },
-    { device_id: 'dev_off_door', label: '办公室门禁', type: 'door', online: true },
+    { device_id: 'dev_off_door', label: '办公室门禁', type: 'door', online: false },
     { device_id: 'dev_off_sens', label: '温湿度传感器', type: 'sensor', online: false },
   ],
   spc_gym_1: [
@@ -254,6 +254,17 @@ let opLogId = 3
 
 // 门禁白名单 mock（7.5③）：{space_id, device_id, label}。mark/unmark 就地增删。
 const doorDevices = []
+
+// 空间类型 mock（对齐 format.js SPACE_TYPES + migration_v15.sql 种子）。
+const spaceTypes = [
+  { code: 'standard', name: '标准教室', sort_order: 0, enabled: true, icon: '' },
+  { code: 'lecture', name: '多媒体报告厅', sort_order: 1, enabled: true, icon: '' },
+  { code: 'office', name: '办公室', sort_order: 2, enabled: true, icon: '' },
+  { code: 'gym', name: '体育馆', sort_order: 3, enabled: true, icon: '' },
+  { code: 'lab', name: '实验室', sort_order: 4, enabled: true, icon: '' },
+  { code: 'library', name: '图书馆', sort_order: 5, enabled: true, icon: '' },
+  { code: 'canteen', name: '食堂', sort_order: 6, enabled: true, icon: '' },
+]
 
 // 空间授权：与网关 main.cpp 的 user_spaces seed 对齐（admin 全量，教师按绑定）。
 const USER_SPACES = {
@@ -498,6 +509,63 @@ export const mockApi = {
     if (!u) return Promise.reject(new Error('未登录'))
     if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理绑定'))
     USER_SPACES[userId] = (USER_SPACES[userId] || []).filter((s) => s !== spaceId)
+    return delay({ ok: true })
+  },
+
+  // 空间类型：读登录可读（返回全部含停用，按 sort_order）；写仅 admin。
+  spaceTypes() {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const list = spaceTypes.slice().sort((a, b) => a.sort_order - b.sort_order)
+    return delay(list.map((t) => ({ ...t })))
+  },
+
+  createSpaceType(payload) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理空间类型'))
+    const code = (payload && payload.code) || ''
+    const name = (payload && payload.name) || ''
+    if (!code || !name) return Promise.reject(new Error('code 和 name 必填'))
+    if (spaceTypes.some((t) => t.code === code)) return Promise.reject(new Error('类型 code 已存在'))
+    const sortOrder =
+      payload && payload.sort_order != null
+        ? payload.sort_order
+        : spaceTypes.reduce((m, t) => Math.max(m, t.sort_order), -1) + 1
+    spaceTypes.push({ code, name, sort_order: sortOrder, enabled: true, icon: (payload && payload.icon) || '' })
+    return delay({ ok: true })
+  },
+
+  updateSpaceType(code, payload) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理空间类型'))
+    const t = spaceTypes.find((x) => x.code === code)
+    if (!t) return Promise.reject(new Error('空间类型不存在'))
+    if (payload && payload.name != null) t.name = payload.name
+    if (payload && payload.icon != null) t.icon = payload.icon
+    if (payload && payload.enabled != null) t.enabled = payload.enabled
+    return delay({ ok: true })
+  },
+
+  disableSpaceType(code) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理空间类型'))
+    const t = spaceTypes.find((x) => x.code === code)
+    if (!t) return Promise.reject(new Error('空间类型不存在'))
+    t.enabled = false
+    return delay({ ok: true })
+  },
+
+  reorderSpaceTypes(codes) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理空间类型'))
+    codes.forEach((code, i) => {
+      const t = spaceTypes.find((x) => x.code === code)
+      if (t) t.sort_order = i
+    })
     return delay({ ok: true })
   },
 

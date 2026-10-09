@@ -53,6 +53,7 @@ stringData:
 #     --from-file=sql/migration_v12.sql \
 #     --from-file=sql/migration_v13.sql \
 #     --from-file=sql/migration_v14.sql \
+#     --from-file=sql/migration_v15.sql \
 #     -o yaml --dry-run=client | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
@@ -92,7 +93,8 @@ spec:
                 -f /migrations/migration_v11.sql \
                 -f /migrations/migration_v12.sql \
                 -f /migrations/migration_v13.sql \
-                -f /migrations/migration_v14.sql
+                -f /migrations/migration_v14.sql \
+                -f /migrations/migration_v15.sql
           env:
             - name: PG_CONNINFO
               valueFrom:
