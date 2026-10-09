@@ -246,6 +246,13 @@ export default {
       return !this.isAdmin && this.spaces.length === 0
     },
   },
+  onLoad(option) {
+    // 首页「最新告警」单条直达详情：本页带 goto=alert_id 进入时透传跳详情，
+    // 详情返回后自然落到告警列表。
+    if (option && option.goto) {
+      uni.navigateTo({ url: '/pages/alerts/detail?id=' + encodeURIComponent(option.goto) })
+    }
+  },
   onShow() {
     if (!isLoggedIn()) {
       uni.reLaunch({ url: '/pages/login/login' })

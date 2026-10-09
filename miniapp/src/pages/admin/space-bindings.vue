@@ -296,7 +296,8 @@ export default {
   right: 0;
   top: 0;
   bottom: 0;
-  z-index: 1000;
+  /* 低于 uni-app picker 弹层(999)，否则弹层内嵌的选择器会被 sheet 遮挡 */
+  z-index: 990;
   background: rgba(0, 0, 0, 0.5);
 }
 .sheet {
@@ -304,7 +305,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1001;
+  z-index: 991;
   background: #fff;
   border-radius: 16rpx 16rpx 0 0;
   padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
