@@ -5,6 +5,7 @@
       <text class="t">空间类型</text>
       <text class="more more-action" @tap="openCreate">+ 新增类型</text>
     </view>
+    <text class="hint">开关控制类型启停；「停用」即删除，已关联教室不受影响</text>
 
     <!-- 类型列表 -->
     <view v-if="types.length" class="list-group">
@@ -15,20 +16,19 @@
               <text class="t-name">{{ t.name }}</text>
               <text class="t-code">{{ t.code }}</text>
             </view>
-            <switch class="t-switch" :checked="t.enabled" color="#409eff" @change="onToggle(t, $event)" />
+            <view class="t-enable">
+              <text class="t-enable-label">{{ t.enabled ? '已启用' : '已停用' }}</text>
+              <switch class="t-switch" :checked="t.enabled" color="#409eff" @change="onToggle(t, $event)" />
+            </view>
           </view>
           <view class="t-actions">
-            <view class="icon-btn" :class="{ disabled: i === 0 }" @tap="move(i, -1)">
-              <uni-icons type="arrow-up" size="18" :color="i === 0 ? 'var(--text-4)' : 'var(--text-2)'" />
+            <view class="act-btn" @tap="openEdit(t)">
+              <uni-icons type="compose" size="14" color="var(--text-2)" />
+              <text class="act-label">编辑</text>
             </view>
-            <view class="icon-btn" :class="{ disabled: i === types.length - 1 }" @tap="move(i, 1)">
-              <uni-icons type="arrow-down" size="18" :color="i === types.length - 1 ? 'var(--text-4)' : 'var(--text-2)'" />
-            </view>
-            <view class="icon-btn" @tap="openEdit(t)">
-              <uni-icons type="compose" size="18" color="var(--text-2)" />
-            </view>
-            <view class="icon-btn" @tap="removeType(t)">
-              <uni-icons type="trash" size="18" color="var(--danger)" />
+            <view class="act-btn" @tap="removeType(t)">
+              <uni-icons type="trash" size="14" color="var(--danger)" />
+              <text class="act-label act-label-danger">停用</text>
             </view>
           </view>
         </view>
@@ -146,24 +146,6 @@ export default {
         uni.showToast({ title: err.message || '操作失败', icon: 'none' })
       }
     },
-    move(index, dir) {
-      const target = index + dir
-      if (target < 0 || target >= this.types.length) return
-      const arr = this.types.slice()
-      const tmp = arr[index]
-      arr[index] = arr[target]
-      arr[target] = tmp
-      this.persistOrder(arr)
-    },
-    async persistOrder(arr) {
-      try {
-        await api.reorderSpaceTypes(arr.map((t) => t.code))
-        arr.forEach((t, i) => { t.sort_order = i })
-        this.types = arr
-      } catch (e) {
-        uni.showToast({ title: e.message || '排序失败', icon: 'none' })
-      }
-    },
     removeType(t) {
       uni.showModal({
         title: '停用类型',
@@ -193,6 +175,13 @@ export default {
 
 .more-action {
   color: var(--primary);
+}
+.hint {
+  display: block;
+  margin: 8rpx 0 12rpx;
+  font-size: 22rpx;
+  color: var(--text-4);
+  line-height: 1.5;
 }
 
 .list-group {
@@ -230,6 +219,15 @@ export default {
   font-size: 22rpx;
   color: var(--text-3);
 }
+.t-enable {
+  display: flex;
+  align-items: center;
+}
+.t-enable-label {
+  margin-right: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
 .t-switch {
   transform: scale(0.8);
   transform-origin: right center;
@@ -237,22 +235,29 @@ export default {
 .t-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  flex-wrap: wrap;
   margin-top: 16rpx;
 }
-.icon-btn {
+.act-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 60rpx;
-  height: 60rpx;
-  margin-left: 8rpx;
+  height: 56rpx;
+  padding: 0 18rpx;
+  margin: 0 12rpx 8rpx 0;
   background: var(--info-bg);
   border: 1rpx solid var(--info-border);
   border-radius: 8rpx;
 }
-.icon-btn.disabled {
+.act-btn.disabled {
   opacity: 0.4;
+}
+.act-label {
+  margin-left: 6rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+}
+.act-label-danger {
+  color: var(--danger);
 }
 
 /* 弹层 */
