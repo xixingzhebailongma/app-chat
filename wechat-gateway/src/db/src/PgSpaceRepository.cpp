@@ -2,7 +2,9 @@
 
 #include <libpq-fe.h>
 
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "db/PgPool.h"
 
@@ -22,24 +24,54 @@ const char* str(PGresult* res, int row, int col) {
     return PQgetisnull(res, row, col) ? "" : PQgetvalue(res, row, col);
 }
 
+// PostgreSQL boolean 文本输出为 't' / 'f'。
+bool asBool(PGresult* res, int row, int col) {
+    return str(res, row, col)[0] == 't';
+}
+
+// 列序：space_id, name, type, enabled, source。
+Space parseRow(PGresult* res, int row) {
+    Space s;
+    s.space_id = str(res, row, 0);
+    s.name = str(res, row, 1);
+    s.type = str(res, row, 2);
+    s.enabled = asBool(res, row, 3);
+    s.source = str(res, row, 4);
+    return s;
+}
+
 }  // namespace
 
 PgSpaceRepository::PgSpaceRepository(std::shared_ptr<PgPool> pool)
     : pool_(std::move(pool)) {}
 
 std::vector<Space> PgSpaceRepository::listAll() const {
-    const std::string sql = "SELECT space_id, name, type FROM spaces ORDER BY name";
+    const std::string sql =
+        "SELECT space_id, name, type, enabled, source FROM spaces ORDER BY name";
     PGresult* res = pool_->execParams(sql, {});
     std::vector<Space> out;
     if (okStatus(res) && PQresultStatus(res) == PGRES_TUPLES_OK) {
         const int n = PQntuples(res);
         out.reserve(static_cast<size_t>(n));
         for (int i = 0; i < n; ++i) {
-            Space s;
-            s.space_id = str(res, i, 0);
-            s.name = str(res, i, 1);
-            s.type = str(res, i, 2);
-            out.push_back(std::move(s));
+            out.push_back(parseRow(res, i));
+        }
+    }
+    pool_->clear(res);
+    return out;
+}
+
+std::vector<Space> PgSpaceRepository::listEnabled() const {
+    const std::string sql =
+        "SELECT space_id, name, type, enabled, source FROM spaces"
+        " WHERE enabled = true ORDER BY name";
+    PGresult* res = pool_->execParams(sql, {});
+    std::vector<Space> out;
+    if (okStatus(res) && PQresultStatus(res) == PGRES_TUPLES_OK) {
+        const int n = PQntuples(res);
+        out.reserve(static_cast<size_t>(n));
+        for (int i = 0; i < n; ++i) {
+            out.push_back(parseRow(res, i));
         }
     }
     pool_->clear(res);
@@ -49,16 +81,13 @@ std::vector<Space> PgSpaceRepository::listAll() const {
 std::optional<Space> PgSpaceRepository::findById(
     const std::string& space_id) const {
     const std::string sql =
-        "SELECT space_id, name, type FROM spaces WHERE space_id = $1";
+        "SELECT space_id, name, type, enabled, source FROM spaces"
+        " WHERE space_id = $1";
     PGresult* res = pool_->execParams(sql, {space_id});
     std::optional<Space> out;
     if (okStatus(res) && PQresultStatus(res) == PGRES_TUPLES_OK &&
         PQntuples(res) > 0) {
-        Space s;
-        s.space_id = str(res, 0, 0);
-        s.name = str(res, 0, 1);
-        s.type = str(res, 0, 2);
-        out = std::move(s);
+        out = parseRow(res, 0);
     }
     pool_->clear(res);
     return out;
@@ -66,12 +95,35 @@ std::optional<Space> PgSpaceRepository::findById(
 
 void PgSpaceRepository::upsert(const Space& space) {
     const std::string sql =
-        "INSERT INTO spaces (space_id, name, type) VALUES ($1, $2, $3)"
+        "INSERT INTO spaces (space_id, name, type, enabled, source)"
+        " VALUES ($1, $2, $3, $4, $5)"
         " ON CONFLICT (space_id) DO UPDATE SET name = EXCLUDED.name,"
-        " type = EXCLUDED.type";
-    PGresult* res =
-        pool_->execParams(sql, {space.space_id, space.name, space.type});
+        " type = EXCLUDED.type, enabled = EXCLUDED.enabled,"
+        " source = EXCLUDED.source";
+    PGresult* res = pool_->execParams(
+        sql, {space.space_id, space.name, space.type,
+              space.enabled ? "true" : "false", space.source});
     pool_->clear(res);
+}
+
+void PgSpaceRepository::updateMeta(const std::string& space_id,
+                                   const std::string& name,
+                                   const std::string& type) {
+    const std::string sql =
+        "UPDATE spaces SET name = $2, type = $3, source = 'admin'"
+        " WHERE space_id = $1";
+    PGresult* res = pool_->execParams(sql, {space_id, name, type});
+    pool_->clear(res);
+}
+
+bool PgSpaceRepository::disable(const std::string& space_id) {
+    const std::string sql =
+        "UPDATE spaces SET enabled = false, source = 'admin'"
+        " WHERE space_id = $1";
+    PGresult* res = pool_->execParams(sql, {space_id});
+    const bool ok = okStatus(res) && PQresultStatus(res) == PGRES_COMMAND_OK;
+    pool_->clear(res);
+    return ok;
 }
 
 void PgSpaceRepository::remove(const std::string& space_id) {

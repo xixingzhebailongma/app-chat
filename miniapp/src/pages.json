@@ -95,6 +95,16 @@
         "enablePullDownRefresh": true,
         "backgroundColor": "#f5f7fa"
       }
+    },
+    {
+      "path": "pages/admin/spaces",
+      "style": {
+        "navigationBarTitleText": "教室管理",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black",
+        "enablePullDownRefresh": true,
+        "backgroundColor": "#f5f7fa"
+      }
     }
   ],
   "globalStyle": {

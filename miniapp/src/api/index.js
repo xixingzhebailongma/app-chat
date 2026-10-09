@@ -239,4 +239,33 @@ export const api = {
           data: { codes },
         })
   },
+
+  // 教室管理（读：admin 列表；写：仅 admin）
+  adminSpaces() {
+    return useMock()
+      ? mockApi.adminSpaces()
+      : request({ url: base() + '/api/admin/spaces' }).then((res) => (res && res.spaces) || [])
+  },
+  createSpace(payload) {
+    return useMock()
+      ? mockApi.createSpace(payload)
+      : request({ url: base() + '/api/admin/spaces', method: 'POST', data: payload })
+  },
+  updateSpace(spaceId, payload) {
+    return useMock()
+      ? mockApi.updateSpace(spaceId, payload)
+      : request({
+          url: base() + '/api/admin/spaces/' + encodeURIComponent(spaceId),
+          method: 'PUT',
+          data: payload,
+        })
+  },
+  disableSpace(spaceId) {
+    return useMock()
+      ? mockApi.disableSpace(spaceId)
+      : request({
+          url: base() + '/api/admin/spaces/' + encodeURIComponent(spaceId),
+          method: 'DELETE',
+        })
+  },
 }

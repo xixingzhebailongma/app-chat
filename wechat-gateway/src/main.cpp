@@ -768,7 +768,7 @@ int main() {
     auto deviceService =
         std::make_shared<DeviceService>(goBackendClient, userSpacesRepo);
     auto spaceService =
-        std::make_shared<SpaceService>(spaceRepo, userSpacesRepo);
+        std::make_shared<SpaceService>(spaceRepo, userSpacesRepo, spaceTypeRepo);
     auto alertService = std::make_shared<AlertService>(
         alertRepo, userSpacesRepo, operationLogRepo, operationLogFile);
     auto subscriptionService = std::make_shared<SubscriptionService>(
@@ -1016,6 +1016,38 @@ int main() {
             spaceCtrl->spaces(req, std::move(cb));
         },
         {Get, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/spaces",
+        [spaceCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceCtrl->adminList(req, std::move(cb));
+        },
+        {Get, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/spaces",
+        [spaceCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceCtrl->create(req, std::move(cb));
+        },
+        {Post, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/spaces/{space_id}",
+        [spaceCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceCtrl->update(req, std::move(cb));
+        },
+        {Put, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/admin/spaces/{space_id}",
+        [spaceCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            spaceCtrl->disable(req, std::move(cb));
+        },
+        {Delete, std::string("JwtFilter")});
 
     app().registerHandler(
         "/api/miniapp/alerts",

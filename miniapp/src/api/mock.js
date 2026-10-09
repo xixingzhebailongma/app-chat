@@ -6,14 +6,14 @@ import { store, isLoggedIn } from '../store/index'
 // 空间：带类型（standard 标准教室 / lecture 多媒体报告厅 / office 办公室）。
 // 第一级按类型区分，第二级才是类型下的各个教室。
 const spaces = [
-  { space_id: 'spc_a8acdd5c', name: 'A101 教室', type: 'standard' },
-  { space_id: 'spc_std_a102', name: 'A102 教室', type: 'standard' },
-  { space_id: 'spc_b7bee44d', name: '多媒体报告厅', type: 'lecture' },
-  { space_id: 'spc_office_1', name: '教师办公室', type: 'office' },
-  { space_id: 'spc_gym_1', name: '体育馆', type: 'gym' },
-  { space_id: 'spc_lab_1', name: '化学实验室', type: 'lab' },
-  { space_id: 'spc_lib_1', name: '图书馆', type: 'library' },
-  { space_id: 'spc_canteen_1', name: '学生食堂', type: 'canteen' },
+  { space_id: 'spc_a8acdd5c', name: 'A101 教室', type: 'standard', enabled: true, source: 'edge' },
+  { space_id: 'spc_std_a102', name: 'A102 教室', type: 'standard', enabled: true, source: 'edge' },
+  { space_id: 'spc_b7bee44d', name: '多媒体报告厅', type: 'lecture', enabled: true, source: 'edge' },
+  { space_id: 'spc_office_1', name: '教师办公室', type: 'office', enabled: true, source: 'edge' },
+  { space_id: 'spc_gym_1', name: '体育馆', type: 'gym', enabled: true, source: 'edge' },
+  { space_id: 'spc_lab_1', name: '化学实验室', type: 'lab', enabled: true, source: 'edge' },
+  { space_id: 'spc_lib_1', name: '图书馆', type: 'library', enabled: true, source: 'edge' },
+  { space_id: 'spc_canteen_1', name: '学生食堂', type: 'canteen', enabled: true, source: 'edge' },
 ]
 
 // 设备：按空间组织，设备类型按空间类型各有所属
@@ -324,8 +324,12 @@ export const mockApi = {
   spaces() {
     const u = currentUser()
     if (!u) return Promise.reject(new Error('未登录'))
+    // admin 看全部启用教室（含管理员新建的）；teacher 按绑定过滤。
+    if (u.role === 'admin') {
+      return delay(spaces.filter((s) => s.enabled).map((s) => ({ ...s })))
+    }
     const allowed = USER_SPACES[u.user_id] || []
-    return delay(spaces.filter((s) => allowed.includes(s.space_id)).map((s) => ({ ...s })))
+    return delay(spaces.filter((s) => s.enabled && allowed.includes(s.space_id)).map((s) => ({ ...s })))
   },
 
   // 设备：按 space_id 返回；访问未授权空间会被拒
@@ -566,6 +570,52 @@ export const mockApi = {
       const t = spaceTypes.find((x) => x.code === code)
       if (t) t.sort_order = i
     })
+    return delay({ ok: true })
+  },
+
+  // 教室管理：读 admin 列表；写仅 admin。
+  adminSpaces() {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理教室'))
+    return delay(spaces.slice().map((s) => ({ ...s })))
+  },
+
+  createSpace(payload) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理教室'))
+    const name = (payload && payload.name) || ''
+    const type = (payload && payload.type) || ''
+    if (!name || !type) return Promise.reject(new Error('教室名和类型必填'))
+    if (!spaceTypes.some((t) => t.code === type)) return Promise.reject(new Error('类型不存在'))
+    const spaceId = (payload && payload.space_id) || ('spc_' + Date.now())
+    if (spaces.some((s) => s.space_id === spaceId)) return Promise.reject(new Error('教室已存在'))
+    spaces.push({ space_id: spaceId, name, type, enabled: true, source: 'admin' })
+    return delay({ ok: true, space_id: spaceId })
+  },
+
+  updateSpace(spaceId, payload) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理教室'))
+    const s = spaces.find((x) => x.space_id === spaceId)
+    if (!s) return Promise.reject(new Error('教室不存在'))
+    if (payload && payload.name != null) s.name = payload.name
+    if (payload && payload.type != null) {
+      if (!spaceTypes.some((t) => t.code === payload.type)) return Promise.reject(new Error('类型不存在'))
+      s.type = payload.type
+    }
+    return delay({ ok: true })
+  },
+
+  disableSpace(spaceId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理教室'))
+    const s = spaces.find((x) => x.space_id === spaceId)
+    if (!s) return Promise.reject(new Error('教室不存在'))
+    s.enabled = false
     return delay({ ok: true })
   },
 

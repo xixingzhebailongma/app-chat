@@ -556,6 +556,67 @@ paths:
         "200": { $ref: "#/components/responses/Json200" }
         "403": { $ref: "#/components/responses/Error403" }
 
+  /api/admin/spaces:
+    get:
+      tags: [miniapp]
+      summary: 教室列表（admin，含停用 + source）
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+    post:
+      tags: [miniapp]
+      summary: 新建教室（admin only；type 必须在 space_types；space_id 缺省自动生成）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name: { type: string }
+                type: { type: string }
+                space_id: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+        "409": { $ref: "#/components/responses/Error409" }
+
+  /api/admin/spaces/{space_id}:
+    put:
+      tags: [miniapp]
+      summary: 改教室名/类型（admin only）
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+        "404": { $ref: "#/components/responses/Error404" }
+    delete:
+      tags: [miniapp]
+      summary: 停用教室（admin only，软删除 enabled=false）
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Json200" }
+        "403": { $ref: "#/components/responses/Error403" }
+        "404": { $ref: "#/components/responses/Error404" }
+
   /api/miniapp/space-types:
     get:
       tags: [miniapp]

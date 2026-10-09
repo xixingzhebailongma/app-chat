@@ -37,6 +37,11 @@
 
     <!-- 管理入口（仅管理员） -->
     <view v-if="store.role === 'admin'" class="list-group manage">
+      <view class="list-cell list-cell-center" hover-class="cell-hover" @tap="goManage('spaces')">
+        <view class="m-icon"><uni-icons type="home" size="20" color="var(--text-2)" /></view>
+        <text class="m-label">教室管理</text>
+        <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
+      </view>
       <view class="list-cell list-cell-center" hover-class="cell-hover" @tap="goManage('bindings')">
         <view class="m-icon"><uni-icons type="person" size="20" color="var(--text-2)" /></view>
         <text class="m-label">教师教室绑定</text>
@@ -227,7 +232,9 @@ export default {
       uni.reLaunch({ url: '/pages/' + page + '/' + page })
     },
     goManage(type) {
-      if (type === 'bindings') {
+      if (type === 'spaces') {
+        uni.navigateTo({ url: '/pages/admin/spaces' })
+      } else if (type === 'bindings') {
         uni.navigateTo({ url: '/pages/admin/space-bindings' })
       } else if (type === 'records') {
         uni.navigateTo({ url: '/pages/records/records' })
