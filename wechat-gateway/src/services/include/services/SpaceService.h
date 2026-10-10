@@ -28,10 +28,11 @@ public:
     ServiceResult create(const std::string& role, const std::string& name,
                          const std::string& type, const std::string& spaceId);
 
-    // PUT /api/admin/spaces/{space_id}：改 name/type（可选字段合并）。
+    // PUT /api/admin/spaces/{space_id}：改 name/type/enabled（可选字段合并）。
     ServiceResult update(const std::string& role, const std::string& spaceId,
                          std::optional<std::string> name,
-                         std::optional<std::string> type);
+                         std::optional<std::string> type,
+                         std::optional<bool> enabled);
 
     // DELETE /api/admin/spaces/{space_id}：软删除（enabled=false）。
     ServiceResult disable(const std::string& role, const std::string& spaceId);

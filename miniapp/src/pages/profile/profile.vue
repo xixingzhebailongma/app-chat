@@ -20,7 +20,7 @@
           <text class="cell-title">订阅消息通知</text>
           <text class="cell-desc">开启后，设备离线、告警等将通过微信订阅消息推送</text>
         </view>
-        <switch :checked="subscribed" color="#409eff" @change="onSubscribe" />
+        <switch :checked="subscribed" color="#5b8def" @change="onSubscribe" />
       </view>
     </view>
 

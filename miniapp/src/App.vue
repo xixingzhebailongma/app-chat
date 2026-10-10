@@ -68,11 +68,11 @@ export default {
 <style>
 /* ============ 全局设计系统（微信原生风：分组列表 + 灰色小节标题 + 去彩色强调） ============ */
 page {
-  --primary: #409eff;
-  --primary-hover: #79bbff;
-  --primary-active: #337ecc;
-  --primary-soft: #ecf5ff;
-  --primary-border: #d9ecff;
+  --primary: #5b8def;
+  --primary-hover: #7aa5f2;
+  --primary-active: #4a7ad6;
+  --primary-soft: rgba(91, 141, 239, 0.10);
+  --primary-border: rgba(91, 141, 239, 0.24);
 
   --text-1: #303133;
   --text-2: #606266;
@@ -102,7 +102,8 @@ page {
   --radius-lg: 12rpx;
   --shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
 
-  background: var(--bg);
+  background: linear-gradient(180deg, #edf2f9 0%, #f7f9fc 45%, #eef3f9 100%);
+  background-attachment: fixed;
   color: var(--text-1);
   font-size: 28rpx;
   line-height: 1.5;
@@ -110,18 +111,23 @@ page {
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-/* 通用卡片（白底 + 细边框 + 小圆角，去阴影更贴近原生） */
+/* 通用卡片（半透明毛玻璃 + 细边框 + 小圆角） */
 .card {
-  background: #ffffff;
-  border: 1rpx solid var(--border-light);
+  background: rgba(255, 255, 255, 0.68);
+  border: 1rpx solid rgba(255, 255, 255, 0.85);
   border-radius: var(--radius-lg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* 微信式分组列表：一个大白块内多行，行间 1rpx 发丝线 */
 .list-group {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1rpx solid rgba(255, 255, 255, 0.85);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 .list-cell {
   display: flex;

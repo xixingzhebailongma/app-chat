@@ -8,7 +8,6 @@
 
 #include "services/AuthService.h"
 #include "services/DeviceControlService.h"
-#include "services/SceneService.h"
 
 class MiniAppController {
 public:
@@ -16,8 +15,7 @@ public:
         std::function<void(const drogon::HttpResponsePtr&)>;
 
     explicit MiniAppController(std::shared_ptr<AuthService> service,
-                               std::shared_ptr<DeviceControlService> deviceControl,
-                               std::shared_ptr<SceneService> scene);
+                               std::shared_ptr<DeviceControlService> deviceControl);
 
     void login(const drogon::HttpRequestPtr& req, Callback&& callback);
     void bind(const drogon::HttpRequestPtr& req, Callback&& callback);
@@ -30,12 +28,7 @@ public:
     // 之后，将设备命令转发给 go-backend（设计文档 八）。
     void deviceControl(const drogon::HttpRequestPtr& req, Callback&& callback);
 
-    // POST /api/miniapp/scene/execute —— 一键场景，服务端展开为多条
-    // on/off 转发 go-backend（设计文档 7.4②）。
-    void sceneExecute(const drogon::HttpRequestPtr& req, Callback&& callback);
-
 private:
     std::shared_ptr<AuthService> service_;
     std::shared_ptr<DeviceControlService> deviceControl_;
-    std::shared_ptr<SceneService> scene_;
 };

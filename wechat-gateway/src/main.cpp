@@ -33,6 +33,7 @@
 #include "controllers/SpaceBindingController.h"
 #include "controllers/NotifyBindingController.h"
 #include "controllers/SpaceController.h"
+#include "controllers/SceneController.h"
 #include "controllers/SpaceTypeController.h"
 #include "controllers/SpaceSyncController.h"
 #include "controllers/StudentParentSyncController.h"
@@ -70,6 +71,8 @@
 #include "db/PgWechatBindingRepository.h"
 #include "db/RedisClient.h"
 #include "db/SpaceRepository.h"
+#include "db/SceneRepository.h"
+#include "db/PgSceneRepository.h"
 #include "db/SpaceTypeRepository.h"
 #include "db/StudentParentRepository.h"
 #include "db/SubscriptionRepository.h"
@@ -360,6 +363,7 @@ int main() {
     std::shared_ptr<AlertRepository> alertRepo;
     std::shared_ptr<DoorDeviceRepository> doorDeviceRepo;  // 门禁白名单（7.5③）
     std::shared_ptr<SpaceTypeRepository> spaceTypeRepo;    // 空间类型（自定义类型标签）
+    std::shared_ptr<SceneRepository> sceneRepo;            // 自定义场景（教师端）
     std::shared_ptr<SubscriptionRepository> subscriptionRepo;
     std::shared_ptr<WechatBindingRepository> wechatBindingRepo;
     std::shared_ptr<UserRoleRepository> userRoleRepo;
@@ -381,6 +385,7 @@ int main() {
         userSpacesRepo = std::make_shared<PgUserSpacesRepository>(pgPool);
         spaceRepo = std::make_shared<PgSpaceRepository>(pgPool);
         spaceTypeRepo = std::make_shared<PgSpaceTypeRepository>(pgPool);
+        sceneRepo = std::make_shared<PgSceneRepository>(pgPool);
         studentParentRepo = std::make_shared<PgStudentParentRepository>(pgPool);
         alertRepo = std::make_shared<PgAlertRepository>(pgPool);
         doorDeviceRepo = std::make_shared<PgDoorDeviceRepository>(pgPool);
@@ -437,6 +442,7 @@ int main() {
             spaceTypesMem->add(SpaceType{"library", "图书馆", 5, true, ""});
             spaceTypesMem->add(SpaceType{"canteen", "食堂", 6, true, ""});
             spaceTypeRepo = spaceTypesMem;
+            sceneRepo = std::make_shared<InMemorySceneRepository>();
         }
         {
             // 操作人姓名种子（对齐 sql/seed_dev.sql 的 wechat_bindings.name）。
@@ -762,9 +768,10 @@ int main() {
     auto oaBindService = std::make_shared<OaBindService>(
         wechatClient, smsClient, bindingRepo, studentParentRepo);
     auto deviceControlService = std::make_shared<DeviceControlService>(
-        goBackendClient, userSpacesRepo, doorDeviceRepo);
+        goBackendClient, userSpacesRepo, doorDeviceRepo, spaceRepo);
     auto sceneService = std::make_shared<SceneService>(
-        goBackendClient, userSpacesRepo, operationLogRepo, operationLogFile);
+        goBackendClient, userSpacesRepo, spaceRepo, sceneRepo,
+        operationLogRepo, operationLogFile);
     auto deviceService =
         std::make_shared<DeviceService>(goBackendClient, userSpacesRepo);
     auto spaceService =
@@ -793,7 +800,8 @@ int main() {
     auto notifyCtrl = std::make_shared<NotifyController>(notifyService);
     auto oaCtrl = std::make_shared<OaController>(oaService, oaBindService);
     auto miniAppCtrl = std::make_shared<MiniAppController>(
-        authService, deviceControlService, sceneService);
+        authService, deviceControlService);
+    auto sceneCtrl = std::make_shared<SceneController>(sceneService);
     auto deviceCtrl =
         std::make_shared<DeviceController>(deviceService);
     auto spaceCtrl = std::make_shared<SpaceController>(spaceService);
@@ -994,10 +1002,42 @@ int main() {
         {Post, std::string("JwtFilter")});
 
     app().registerHandler(
-        "/api/miniapp/scene/execute",
-        [miniAppCtrl](const HttpRequestPtr& req,
-                      std::function<void(const HttpResponsePtr&)>&& cb) {
-            miniAppCtrl->sceneExecute(req, std::move(cb));
+        "/api/miniapp/scenes",
+        [sceneCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            sceneCtrl->list(req, std::move(cb));
+        },
+        {Get, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/miniapp/scenes",
+        [sceneCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            sceneCtrl->create(req, std::move(cb));
+        },
+        {Post, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/miniapp/scenes/{scene_id}",
+        [sceneCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            sceneCtrl->update(req, std::move(cb));
+        },
+        {Put, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/miniapp/scenes/{scene_id}",
+        [sceneCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            sceneCtrl->remove(req, std::move(cb));
+        },
+        {Delete, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/miniapp/scenes/{scene_id}/execute",
+        [sceneCtrl](const HttpRequestPtr& req,
+                    std::function<void(const HttpResponsePtr&)>&& cb) {
+            sceneCtrl->execute(req, std::move(cb));
         },
         {Post, std::string("JwtFilter")});
 

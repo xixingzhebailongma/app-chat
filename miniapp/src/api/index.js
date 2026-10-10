@@ -94,10 +94,41 @@ export const api = {
       : request({ url: base() + '/api/miniapp/door-devices' + qs, method: 'DELETE' })
   },
 
-  sceneExecute(payload) {
+  // 场景（读：登录可读；写：admin/teacher 按空间权限）
+  scenes(spaceId) {
     return useMock()
-      ? mockApi.sceneExecute(payload)
-      : request({ url: base() + '/api/miniapp/scene/execute', method: 'POST', data: payload })
+      ? mockApi.scenes(spaceId)
+      : request({ url: base() + '/api/miniapp/scenes?space_id=' + encodeURIComponent(spaceId) })
+  },
+  createScene(payload) {
+    return useMock()
+      ? mockApi.createScene(payload)
+      : request({ url: base() + '/api/miniapp/scenes', method: 'POST', data: payload })
+  },
+  updateScene(sceneId, payload) {
+    return useMock()
+      ? mockApi.updateScene(sceneId, payload)
+      : request({
+          url: base() + '/api/miniapp/scenes/' + encodeURIComponent(sceneId),
+          method: 'PUT',
+          data: payload,
+        })
+  },
+  deleteScene(sceneId) {
+    return useMock()
+      ? mockApi.deleteScene(sceneId)
+      : request({
+          url: base() + '/api/miniapp/scenes/' + encodeURIComponent(sceneId),
+          method: 'DELETE',
+        })
+  },
+  executeScene(sceneId) {
+    return useMock()
+      ? mockApi.executeScene(sceneId)
+      : request({
+          url: base() + '/api/miniapp/scenes/' + encodeURIComponent(sceneId) + '/execute',
+          method: 'POST',
+        })
   },
 
   subscribe(payload) {

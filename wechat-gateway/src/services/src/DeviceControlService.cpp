@@ -7,10 +7,12 @@
 DeviceControlService::DeviceControlService(
     std::shared_ptr<GoBackendClient> goBackend,
     std::shared_ptr<UserSpacesRepository> spaces,
-    std::shared_ptr<DoorDeviceRepository> doorRepo)
+    std::shared_ptr<DoorDeviceRepository> doorRepo,
+    std::shared_ptr<SpaceRepository> spaceRepo)
     : goBackend_(std::move(goBackend)),
       spaces_(std::move(spaces)),
-      doorRepo_(std::move(doorRepo)) {}
+      doorRepo_(std::move(doorRepo)),
+      spaceRepo_(std::move(spaceRepo)) {}
 
 const std::set<std::string>& DeviceControlService::allowedCommands() {
     static const std::set<std::string> cmds = {"on", "off", "toggle"};
@@ -74,7 +76,7 @@ void DeviceControlService::control(const std::string& userId,
             .dump();
     goBackend_->post(
         path, body, GoBackendClient::bearer(jwt),
-        [cb = std::move(cb)](const GoBackendResponse& r) {
+        [this, cb = std::move(cb), spaceId](const GoBackendResponse& r) {
             if (!r.ok) {
                 // go-backend 不可达 -> 503 + 机器可读代码
                 // （设计文档 13.7）。控制命令不做缓存/重试。
@@ -82,6 +84,10 @@ void DeviceControlService::control(const std::string& userId,
                     drogon::k503ServiceUnavailable, "GO_BACKEND_UNAVAILABLE",
                     r.errmsg.empty() ? "go-backend unreachable" : r.errmsg));
                 return;
+            }
+            // 手动控制成功 → 清空该空间的激活场景（近似版失效，不做 device_update 比对）。
+            if (spaceRepo_) {
+                spaceRepo_->clearActiveScene(spaceId);
             }
             DeviceControlResult out;
             out.status = r.status;

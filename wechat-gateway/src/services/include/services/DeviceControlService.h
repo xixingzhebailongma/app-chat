@@ -11,6 +11,7 @@
 
 #include "clients/GoBackendClient.h"
 #include "db/DoorDeviceRepository.h"
+#include "db/SpaceRepository.h"
 #include "db/UserSpacesRepository.h"
 #include "utils/ErrorBody.h"
 
@@ -52,7 +53,8 @@ public:
 
     DeviceControlService(std::shared_ptr<GoBackendClient> goBackend,
                          std::shared_ptr<UserSpacesRepository> spaces,
-                         std::shared_ptr<DoorDeviceRepository> doorRepo);
+                         std::shared_ptr<DoorDeviceRepository> doorRepo,
+                         std::shared_ptr<SpaceRepository> spaceRepo);
 
     void control(const std::string& userId,
                  const std::string& role,
@@ -74,4 +76,5 @@ private:
     std::shared_ptr<GoBackendClient> goBackend_;
     std::shared_ptr<UserSpacesRepository> spaces_;
     std::shared_ptr<DoorDeviceRepository> doorRepo_;  // 可空（内存模式若未注入）
+    std::shared_ptr<SpaceRepository> spaceRepo_;      // 手动控制后清空激活场景
 };

@@ -35,6 +35,7 @@ if (PostgreSQL_FOUND)
         src/db/src/PgPendingEventRepository.cpp
         src/db/src/PgSpaceRepository.cpp
         src/db/src/PgSpaceTypeRepository.cpp
+        src/db/src/PgSceneRepository.cpp
         src/db/src/PgAlertRepository.cpp
         src/db/src/PgDoorDeviceRepository.cpp
         src/db/src/PgNotifyLogRepository.cpp
@@ -86,6 +87,7 @@ add_executable(wechat-gateway
     src/controllers/src/AlertController.cpp
     src/controllers/src/DoorDeviceController.cpp
     src/controllers/src/SpaceTypeController.cpp
+    src/controllers/src/SceneController.cpp
     src/controllers/src/SubscriptionController.cpp
     src/controllers/src/UserRoleController.cpp
     src/controllers/src/WsProxyController.cpp

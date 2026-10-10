@@ -97,7 +97,8 @@ ServiceResult SpaceService::create(const std::string& role,
 ServiceResult SpaceService::update(const std::string& role,
                                    const std::string& spaceId,
                                    std::optional<std::string> name,
-                                   std::optional<std::string> type) {
+                                   std::optional<std::string> type,
+                                   std::optional<bool> enabled) {
     if (role != "admin") {
         return ServiceResult::error(drogon::k403Forbidden,
                                     "admin role required");
@@ -109,12 +110,14 @@ ServiceResult SpaceService::update(const std::string& role,
 
     std::string newName = existing->name;
     std::string newType = existing->type;
+    bool metaChanged = false;
     if (name.has_value()) {
         if (name->empty()) {
             return ServiceResult::error(drogon::k400BadRequest,
                                         "name must not be empty");
         }
         newName = *name;
+        metaChanged = true;
     }
     if (type.has_value()) {
         if (!spaceTypes_->findByCode(*type)) {
@@ -122,9 +125,14 @@ ServiceResult SpaceService::update(const std::string& role,
                                         "type not found in space_types");
         }
         newType = *type;
+        metaChanged = true;
     }
-
-    spaces_->updateMeta(spaceId, newName, newType);
+    if (metaChanged) {
+        spaces_->updateMeta(spaceId, newName, newType);
+    }
+    if (enabled.has_value()) {
+        spaces_->setEnabled(spaceId, *enabled);
+    }
     return ServiceResult::ok(nlohmann::json{{"ok", true}});
 }
 
@@ -137,6 +145,6 @@ ServiceResult SpaceService::disable(const std::string& role,
     if (!spaces_->findById(spaceId)) {
         return ServiceResult::error(drogon::k404NotFound, "space not found");
     }
-    spaces_->disable(spaceId);
+    spaces_->setEnabled(spaceId, false);
     return ServiceResult::ok(nlohmann::json{{"ok", true}});
 }

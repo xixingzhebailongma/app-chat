@@ -104,6 +104,14 @@ inline const std::map<std::string, std::vector<SceneRule>>& sceneDefinitions() {
          {SceneRule{"fuhe-screen", "", {}, {}, "off"},
           SceneRule{"fuhe-board", "", {}, {}, "off"},
           SceneRule{"zigbee", "", lightKeywords(), {}, "off"}}},
+        {"all_on",
+         {SceneRule{"fuhe-screen", "", {}, {}, "on"},
+          SceneRule{"fuhe-board", "", {}, {}, "on"},
+          SceneRule{"zigbee", "", lightKeywords(), {}, "on"}}},
+        {"all_off",
+         {SceneRule{"fuhe-screen", "", {}, {}, "off"},
+          SceneRule{"fuhe-board", "", {}, {}, "off"},
+          SceneRule{"zigbee", "", lightKeywords(), {}, "off"}}},
     };
     return scenes;
 }

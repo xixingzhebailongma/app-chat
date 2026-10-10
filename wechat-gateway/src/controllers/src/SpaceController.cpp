@@ -104,6 +104,7 @@ void SpaceController::update(
     }
 
     std::optional<std::string> name, type;
+    std::optional<bool> enabled;
     if (body.contains("name")) {
         if (!body["name"].is_string()) {
             callback(http_util::error(drogon::k400BadRequest,
@@ -120,8 +121,16 @@ void SpaceController::update(
         }
         type = body["type"].get<std::string>();
     }
+    if (body.contains("enabled")) {
+        if (!body["enabled"].is_boolean()) {
+            callback(http_util::error(drogon::k400BadRequest,
+                                      "enabled must be a boolean"));
+            return;
+        }
+        enabled = body["enabled"].get<bool>();
+    }
 
-    const auto result = service_->update(id.role, spaceId, name, type);
+    const auto result = service_->update(id.role, spaceId, name, type, enabled);
     callback(http_util::jsonResponse(result.status, result.body));
 }
 

@@ -5,30 +5,22 @@
       <text class="t">空间类型</text>
       <text class="more more-action" @tap="openCreate">+ 新增类型</text>
     </view>
-    <text class="hint">开关控制类型启停；「停用」即删除，已关联教室不受影响</text>
+    <text class="hint">类型是教室的分组标签；新增/改名后可在「教室管理」里给教室选用</text>
 
     <!-- 类型列表 -->
     <view v-if="types.length" class="list-group">
-      <view v-for="(t, i) in types" :key="t.code" class="list-cell type-cell" :class="{ 'is-off': !t.enabled }">
+      <view v-for="t in types" :key="t.code" class="list-cell type-cell">
         <view class="t-main">
           <view class="t-head">
             <view class="t-info">
               <text class="t-name">{{ t.name }}</text>
               <text class="t-code">{{ t.code }}</text>
             </view>
-            <view class="t-enable">
-              <text class="t-enable-label">{{ t.enabled ? '已启用' : '已停用' }}</text>
-              <switch class="t-switch" :checked="t.enabled" color="#409eff" @change="onToggle(t, $event)" />
-            </view>
           </view>
           <view class="t-actions">
             <view class="act-btn" @tap="openEdit(t)">
               <uni-icons type="compose" size="14" color="var(--text-2)" />
               <text class="act-label">编辑</text>
-            </view>
-            <view class="act-btn" @tap="removeType(t)">
-              <uni-icons type="trash" size="14" color="var(--danger)" />
-              <text class="act-label act-label-danger">停用</text>
             </view>
           </view>
         </view>
@@ -137,31 +129,6 @@ export default {
         this.submitting = false
       }
     },
-    async onToggle(t, e) {
-      const enabled = !!e.detail.value
-      try {
-        await api.updateSpaceType(t.code, { enabled })
-        t.enabled = enabled
-      } catch (err) {
-        uni.showToast({ title: err.message || '操作失败', icon: 'none' })
-      }
-    },
-    removeType(t) {
-      uni.showModal({
-        title: '停用类型',
-        content: `确定停用「${t.name}」？停用后仅不再作为新类型可选，已关联教室不受影响。`,
-        success: async (res) => {
-          if (!res.confirm) return
-          try {
-            await api.disableSpaceType(t.code)
-            t.enabled = false
-            uni.showToast({ title: '已停用', icon: 'success' })
-          } catch (e) {
-            uni.showToast({ title: e.message || '停用失败', icon: 'none' })
-          }
-        },
-      })
-    },
   },
 }
 </script>
@@ -191,9 +158,6 @@ export default {
   flex-direction: column;
   align-items: stretch;
 }
-.type-cell.is-off .t-name {
-  color: var(--text-4);
-}
 .t-main {
   flex: 1;
   min-width: 0;
@@ -219,19 +183,6 @@ export default {
   font-size: 22rpx;
   color: var(--text-3);
 }
-.t-enable {
-  display: flex;
-  align-items: center;
-}
-.t-enable-label {
-  margin-right: 8rpx;
-  font-size: 24rpx;
-  color: var(--text-3);
-}
-.t-switch {
-  transform: scale(0.8);
-  transform-origin: right center;
-}
 .t-actions {
   display: flex;
   align-items: center;
@@ -248,16 +199,10 @@ export default {
   border: 1rpx solid var(--info-border);
   border-radius: 8rpx;
 }
-.act-btn.disabled {
-  opacity: 0.4;
-}
 .act-label {
   margin-left: 6rpx;
   font-size: 24rpx;
   color: var(--text-2);
-}
-.act-label-danger {
-  color: var(--danger);
 }
 
 /* 弹层 */

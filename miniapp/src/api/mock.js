@@ -68,6 +68,9 @@ const devices = {
   ],
 }
 
+// 设备开关态（与"在线/离线"连通性区分）：device_id -> on/off。executeScene/control 更新。
+const switchStates = {}
+
 // 把旧的 {type, online} 设备数据转成「综合屏 API 对接文档」的字段模型：
 // device_type / status("online"|"offline") / app / zb_type / gateway_id / info。
 function toDeviceDoc(dev, spaceId) {
@@ -77,7 +80,7 @@ function toDeviceDoc(dev, spaceId) {
     device_id: dev.device_id,
     device_type: t,
     status: online ? 'online' : 'offline',
-    app: online ? 'on' : 'off',
+    app: switchStates[dev.device_id] || 'off',
     label: dev.label,
     space_id: spaceId,
     last_seen: '2026-09-11T04:52:49Z',
@@ -266,10 +269,17 @@ const spaceTypes = [
   { code: 'canteen', name: '食堂', sort_order: 6, enabled: true, icon: '' },
 ]
 
+// 场景 mock（按教室共享）：{scene_id, space_id, name, kind, device_states(数组)}。
+const scenes = []
+// 各教室当前激活场景：space_id -> scene_id。
+const activeSceneBySpace = {}
+// 已懒种默认场景的教室。
+const seededSpaces = new Set()
+
 // 空间授权：与网关 main.cpp 的 user_spaces seed 对齐（admin 全量，教师按绑定）。
 const USER_SPACES = {
   u_admin_1: ['spc_a8acdd5c', 'spc_std_a102', 'spc_b7bee44d', 'spc_office_1', 'spc_gym_1', 'spc_lab_1', 'spc_lib_1', 'spc_canteen_1'],
-  u_teacher_1: ['spc_a8acdd5c'],
+  u_teacher_1: ['spc_a8acdd5c', 'spc_std_a102', 'spc_office_1'],
   u_teacher_2: ['spc_b7bee44d'],
 }
 
@@ -336,6 +346,11 @@ export const mockApi = {
   devices(spaceId) {
     const u = currentUser()
     if (!u) return Promise.reject(new Error('未登录'))
+    // admin 看全部教室（含管理员新建的、暂无设备的）；teacher 按绑定过滤。
+    if (u.role === 'admin') {
+      const target = spaceId || Object.keys(devices)[0] || ''
+      return delay({ devices: (devices[target] || []).map((d) => toDeviceDoc(d, target)) })
+    }
     const allowed = USER_SPACES[u.user_id] || []
     const target = spaceId || allowed[0]
     if (!allowed.includes(target)) return Promise.reject(new Error('无权限访问该空间'))
@@ -424,6 +439,9 @@ export const mockApi = {
     if (isDoor && payload.command === 'off' && !payload.confirm) {
       return Promise.reject(Object.assign(new Error('开门需二次确认'), { code: 'CONFIRM_REQUIRED', status: 428 }))
     }
+    // 手动控制 → 更新设备开关态 + 清空该空间的激活场景。
+    if (payload && payload.device_id) switchStates[payload.device_id] = payload.command
+    if (payload && payload.space_id) delete activeSceneBySpace[payload.space_id]
     return delay({ ok: true, ...payload, echo: 'mock: 指令已下发' })
   },
 
@@ -455,16 +473,91 @@ export const mockApi = {
     return delay({ ok: true })
   },
 
-  // 一键场景：mock 直接返回成功摘要（真实展开由网关 scene/execute 完成）
-  sceneExecute(payload) {
-    if (!currentUser()) return Promise.reject(new Error('未登录'))
-    return delay({
-      ok: true,
-      scene_id: payload.scene_id,
-      space_id: payload.space_id,
-      applied: 1,
-      warning: '',
-    })
+  // 场景：读登录可读（懒种默认开启/离开）；写 admin/teacher 按空间权限。
+  scenes(spaceId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') {
+      const allowed = USER_SPACES[u.user_id] || []
+      if (!allowed.includes(spaceId)) return Promise.reject(new Error('无权限访问该空间'))
+    }
+    if (!seededSpaces.has(spaceId)) {
+      seededSpaces.add(spaceId)
+      scenes.push({ scene_id: 'scn_all_on_' + spaceId, space_id: spaceId, name: '开启模式', kind: 'all_on', device_states: [] })
+      scenes.push({ scene_id: 'scn_all_off_' + spaceId, space_id: spaceId, name: '离开模式', kind: 'all_off', device_states: [] })
+    }
+    const list = scenes.filter((s) => s.space_id === spaceId).map((s) => ({ ...s, device_states: s.device_states.slice() }))
+    return delay({ scenes: list, active_scene_id: activeSceneBySpace[spaceId] || '' })
+  },
+
+  createScene(payload) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const spaceId = (payload && payload.space_id) || ''
+    if (u.role !== 'admin') {
+      const allowed = USER_SPACES[u.user_id] || []
+      if (!allowed.includes(spaceId)) return Promise.reject(new Error('无权限访问该空间'))
+    }
+    const name = (payload && payload.name) || ''
+    const ds = (payload && payload.device_states) || []
+    if (!name) return Promise.reject(new Error('场景名必填'))
+    if (!Array.isArray(ds) || !ds.length) return Promise.reject(new Error('至少选一台设备'))
+    const scene = { scene_id: 'scn_' + Date.now(), space_id: spaceId, name, kind: 'custom', device_states: ds.slice() }
+    scenes.push(scene)
+    return delay({ ok: true, scene_id: scene.scene_id })
+  },
+
+  updateScene(sceneId, payload) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const s = scenes.find((x) => x.scene_id === sceneId)
+    if (!s) return Promise.reject(new Error('场景不存在'))
+    if (u.role !== 'admin') {
+      const allowed = USER_SPACES[u.user_id] || []
+      if (!allowed.includes(s.space_id)) return Promise.reject(new Error('无权限访问该空间'))
+    }
+    if (payload && payload.name != null) s.name = payload.name
+    if (payload && payload.device_states != null) s.device_states = payload.device_states.slice()
+    return delay({ ok: true })
+  },
+
+  deleteScene(sceneId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const s = scenes.find((x) => x.scene_id === sceneId)
+    if (!s) return Promise.reject(new Error('场景不存在'))
+    if (u.role !== 'admin') {
+      const allowed = USER_SPACES[u.user_id] || []
+      if (!allowed.includes(s.space_id)) return Promise.reject(new Error('无权限访问该空间'))
+    }
+    const idx = scenes.findIndex((x) => x.scene_id === sceneId)
+    if (idx >= 0) scenes.splice(idx, 1)
+    if (activeSceneBySpace[s.space_id] === sceneId) delete activeSceneBySpace[s.space_id]
+    return delay({ ok: true })
+  },
+
+  executeScene(sceneId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const s = scenes.find((x) => x.scene_id === sceneId)
+    if (!s) return Promise.reject(new Error('场景不存在'))
+    if (u.role !== 'admin') {
+      const allowed = USER_SPACES[u.user_id] || []
+      if (!allowed.includes(s.space_id)) return Promise.reject(new Error('无权限访问该空间'))
+    }
+    // 更新设备开关态：custom 按 device_states；all_on/all_off 覆盖全部可控设备（除传感器/门禁）。
+    let applied = 0
+    if (s.kind === 'custom') {
+      s.device_states.forEach((x) => { switchStates[x.device_id] = x.command })
+      applied = s.device_states.length
+    } else {
+      const cmd = s.kind === 'all_on' ? 'on' : 'off'
+      ;(devices[s.space_id] || []).forEach((dev) => {
+        if (dev.type !== 'sensor' && dev.type !== 'door') { switchStates[dev.device_id] = cmd; applied++ }
+      })
+    }
+    activeSceneBySpace[s.space_id] = sceneId
+    return delay({ ok: true, scene_id: sceneId, space_id: s.space_id, applied, warning: '' })
   },
 
   // 订阅授权
@@ -606,6 +699,8 @@ export const mockApi = {
       if (!spaceTypes.some((t) => t.code === payload.type)) return Promise.reject(new Error('类型不存在'))
       s.type = payload.type
     }
+    if (payload && payload.enabled != null) s.enabled = payload.enabled
+    s.source = 'admin'  // 管理员改动即接管
     return delay({ ok: true })
   },
 

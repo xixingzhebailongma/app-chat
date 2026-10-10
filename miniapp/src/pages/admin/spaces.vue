@@ -16,16 +16,15 @@
               <text class="s-name">{{ s.name }}</text>
               <text class="s-sub">{{ typeName(s.type) }} · {{ s.space_id }}</text>
             </view>
-            <StatusTag :text="s.enabled ? '启用' : '已停用'" :tone="s.enabled ? 'success' : 'neutral'" />
+            <view class="s-enable">
+              <text class="s-enable-label">{{ s.enabled ? '已启用' : '已停用' }}</text>
+              <switch class="s-switch" :checked="s.enabled" color="#5b8def" @change="onToggle(s, $event)" />
+            </view>
           </view>
           <view class="s-actions">
             <view class="act-btn" @tap="openEdit(s)">
               <uni-icons type="compose" size="14" color="var(--text-2)" />
               <text class="act-label">编辑</text>
-            </view>
-            <view class="act-btn" @tap="removeSpace(s)">
-              <uni-icons type="trash" size="14" color="var(--danger)" />
-              <text class="act-label act-label-danger">停用</text>
             </view>
           </view>
         </view>
@@ -63,11 +62,10 @@
 <script>
 import { api } from '../../api/index'
 import { store, isLoggedIn } from '../../store/index'
-import StatusTag from '../../components/StatusTag.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
 export default {
-  components: { StatusTag, EmptyState },
+  components: { EmptyState },
   data() {
     return {
       store,
@@ -159,21 +157,14 @@ export default {
         this.submitting = false
       }
     },
-    removeSpace(s) {
-      uni.showModal({
-        title: '停用教室',
-        content: `确定停用「${s.name}」？停用后设备页不再显示。`,
-        success: async (res) => {
-          if (!res.confirm) return
-          try {
-            await api.disableSpace(s.space_id)
-            s.enabled = false
-            uni.showToast({ title: '已停用', icon: 'success' })
-          } catch (e) {
-            uni.showToast({ title: e.message || '停用失败', icon: 'none' })
-          }
-        },
-      })
+    async onToggle(s, e) {
+      const enabled = !!e.detail.value
+      try {
+        await api.updateSpace(s.space_id, { enabled })
+        s.enabled = enabled
+      } catch (err) {
+        uni.showToast({ title: err.message || '操作失败', icon: 'none' })
+      }
     },
   },
 }
@@ -233,6 +224,20 @@ export default {
   margin-top: 4rpx;
   font-size: 22rpx;
   color: var(--text-3);
+}
+.s-enable {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.s-enable-label {
+  margin-right: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.s-switch {
+  transform: scale(0.8);
+  transform-origin: right center;
 }
 .s-actions {
   display: flex;

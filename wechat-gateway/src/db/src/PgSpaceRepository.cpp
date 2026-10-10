@@ -29,7 +29,7 @@ bool asBool(PGresult* res, int row, int col) {
     return str(res, row, col)[0] == 't';
 }
 
-// 列序：space_id, name, type, enabled, source。
+// 列序：space_id, name, type, enabled, source, active_scene_id, scenes_seeded。
 Space parseRow(PGresult* res, int row) {
     Space s;
     s.space_id = str(res, row, 0);
@@ -37,6 +37,8 @@ Space parseRow(PGresult* res, int row) {
     s.type = str(res, row, 2);
     s.enabled = asBool(res, row, 3);
     s.source = str(res, row, 4);
+    s.active_scene_id = str(res, row, 5);
+    s.scenes_seeded = asBool(res, row, 6);
     return s;
 }
 
@@ -63,7 +65,7 @@ std::vector<Space> PgSpaceRepository::listAll() const {
 
 std::vector<Space> PgSpaceRepository::listEnabled() const {
     const std::string sql =
-        "SELECT space_id, name, type, enabled, source FROM spaces"
+        "SELECT space_id, name, type, enabled, source, active_scene_id, scenes_seeded FROM spaces"
         " WHERE enabled = true ORDER BY name";
     PGresult* res = pool_->execParams(sql, {});
     std::vector<Space> out;
@@ -81,7 +83,7 @@ std::vector<Space> PgSpaceRepository::listEnabled() const {
 std::optional<Space> PgSpaceRepository::findById(
     const std::string& space_id) const {
     const std::string sql =
-        "SELECT space_id, name, type, enabled, source FROM spaces"
+        "SELECT space_id, name, type, enabled, source, active_scene_id, scenes_seeded FROM spaces"
         " WHERE space_id = $1";
     PGresult* res = pool_->execParams(sql, {space_id});
     std::optional<Space> out;
@@ -116,14 +118,33 @@ void PgSpaceRepository::updateMeta(const std::string& space_id,
     pool_->clear(res);
 }
 
-bool PgSpaceRepository::disable(const std::string& space_id) {
+void PgSpaceRepository::setEnabled(const std::string& space_id, bool enabled) {
     const std::string sql =
-        "UPDATE spaces SET enabled = false, source = 'admin'"
-        " WHERE space_id = $1";
-    PGresult* res = pool_->execParams(sql, {space_id});
-    const bool ok = okStatus(res) && PQresultStatus(res) == PGRES_COMMAND_OK;
+        "UPDATE spaces SET enabled = $2, source = 'admin' WHERE space_id = $1";
+    PGresult* res = pool_->execParams(sql, {space_id, enabled ? "true" : "false"});
     pool_->clear(res);
-    return ok;
+}
+
+void PgSpaceRepository::setActiveScene(const std::string& space_id,
+                                       const std::string& scene_id) {
+    const std::string sql =
+        "UPDATE spaces SET active_scene_id = $2 WHERE space_id = $1";
+    PGresult* res = pool_->execParams(sql, {space_id, scene_id});
+    pool_->clear(res);
+}
+
+void PgSpaceRepository::clearActiveScene(const std::string& space_id) {
+    const std::string sql =
+        "UPDATE spaces SET active_scene_id = '' WHERE space_id = $1";
+    PGresult* res = pool_->execParams(sql, {space_id});
+    pool_->clear(res);
+}
+
+void PgSpaceRepository::markScenesSeeded(const std::string& space_id) {
+    const std::string sql =
+        "UPDATE spaces SET scenes_seeded = true WHERE space_id = $1";
+    PGresult* res = pool_->execParams(sql, {space_id});
+    pool_->clear(res);
 }
 
 void PgSpaceRepository::remove(const std::string& space_id) {

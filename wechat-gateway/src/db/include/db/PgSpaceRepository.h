@@ -21,7 +21,11 @@ public:
     void upsert(const Space& space) override;
     void updateMeta(const std::string& space_id, const std::string& name,
                     const std::string& type) override;
-    bool disable(const std::string& space_id) override;
+    void setEnabled(const std::string& space_id, bool enabled) override;
+    void setActiveScene(const std::string& space_id,
+                        const std::string& scene_id) override;
+    void clearActiveScene(const std::string& space_id) override;
+    void markScenesSeeded(const std::string& space_id) override;
     void remove(const std::string& space_id) override;
 
 private:
