@@ -38,3 +38,9 @@ api-tests/
 # ===== 交接资料（单独交付，不进仓库）=====
 miniapp-handover/
 miniapp-handover-*.zip
+
+# ===== smart-classroom-mp（uni-app，HBuilderX）=====
+smart-classroom-mp/.h5preview/
+smart-classroom-mp/.vite/
+smart-classroom-mp/unpackage/
+smart-classroom-mp/node_modules/
