@@ -8,7 +8,16 @@ let socketTask = null
 
 function wsBase() {
   if (config.WS_BASE_URL) return config.WS_BASE_URL
-  return (config.BASE_URL || '').replace(/^http/, 'ws')
+  const base = config.BASE_URL || ''
+  // 相对 base（'' 或 '/xxx'）：WebSocket 需要绝对 ws:// URL，
+  // 落到当前页面 origin，由 Vite proxy 把 /ws 转发到网关（同源，无 CORS）。
+  if (!base || base.startsWith('/')) {
+    if (typeof location !== 'undefined' && location.origin) {
+      return location.origin.replace(/^http/, 'ws')
+    }
+    return ''
+  }
+  return base.replace(/^http/, 'ws')
 }
 
 // 连接网关 /ws 代理。mock 模式下不连，直接返回 null。

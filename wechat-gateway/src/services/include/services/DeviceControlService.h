@@ -67,7 +67,7 @@ public:
                  Callback cb);
 
     // 命令白名单（设计文档 八 命令白名单）：on / off / toggle。小程序从不做
-    // 连续调节（温度、亮度等）；场景式控制由 scene/execute 展开为 on/off
+    // 连续调节（温度、亮度等）；场景式控制由 scenes/{scene_id}/execute 展开为 on/off
     // 命令。为匹配综合屏 API 约定（仅文档化 on/off/toggle），高风险命令
     // （开门/重启/强制）已移除。
     static const std::set<std::string>& allowedCommands();

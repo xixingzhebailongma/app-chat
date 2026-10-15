@@ -259,6 +259,7 @@ paths:
                 properties:
                   user_id: { type: string }
                   role: { type: string }
+                  name: { type: string }
         "401": { $ref: "#/components/responses/Error401" }
 
   /api/miniapp/devices:
@@ -397,7 +398,26 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        "200": { $ref: "#/components/responses/Json200" }
+        "200":
+          description: OK（ok/applied/results/warning）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  scene_id: { type: string }
+                  space_id: { type: string }
+                  applied: { type: integer, description: 已下发目标数（results 长度，非成功数） }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        device_id: { type: string }
+                        command: { type: string, enum: [on, off] }
+                        status: { type: integer, description: 每设备下发 HTTP 状态，传输失败为 0 }
+                  warning: { type: string, description: 空/未匹配到可控制设备/设备命令下发失败 }
         "403": { $ref: "#/components/responses/Error403" }
         "404": { $ref: "#/components/responses/Error404" }
 
@@ -405,8 +425,64 @@ paths:
     get:
       tags: [miniapp]
       summary: 告警列表（非 admin 隐藏 operator/remark）
+      parameters:
+        - name: space_id
+          in: query
+          required: false
+          schema: { type: string }
+        - name: event_type
+          in: query
+          required: false
+          schema: { type: string }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [unhandled, handling, resolved] }
+        - name: from
+          in: query
+          required: false
+          schema: { type: string }
+          description: 时间范围起（ISO-8601 UTC，如 2026-10-15T00:00:00Z，作用于 created_at）
+        - name: to
+          in: query
+          required: false
+          schema: { type: string }
+          description: 时间范围止（同上）
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, default: 1, minimum: 1, maximum: 10000 }
+        - name: page_size
+          in: query
+          required: false
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
       responses:
-        "200": { $ref: "#/components/responses/Json200" }
+        "200":
+          description: OK（alerts 数组 + 分页信封）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        alert_id: { type: string }
+                        space_id: { type: string }
+                        event_type: { type: string }
+                        status: { type: string, enum: [unhandled, handling, resolved] }
+                        operator_id: { type: string, description: 非 admin 恒空串 }
+                        operator_name: { type: string, description: 非 admin 恒空串 }
+                        remark: { type: string, description: 非 admin 恒空串 }
+                        device_id: { type: string }
+                        device_label: { type: string }
+                        created_at: { type: string }
+                  total: { type: integer }
+                  page: { type: integer }
+                  page_size: { type: integer }
+                  has_more: { type: boolean }
         "401": { $ref: "#/components/responses/Error401" }
 
   /api/miniapp/alerts/{id}:
@@ -463,14 +539,57 @@ paths:
       tags: [miniapp]
       summary: 告警统计（admin 才有 by_space 维度）
       responses:
-        "200": { $ref: "#/components/responses/Json200" }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  by_status:
+                    type: object
+                    properties:
+                      unhandled: { type: integer }
+                      handling: { type: integer }
+                      resolved: { type: integer }
+                  by_event_type: { type: object, additionalProperties: { type: integer } }
+                  by_space:
+                    type: array
+                    description: 仅 admin
+                    items:
+                      type: object
+                      properties:
+                        space_id: { type: string }
+                        count: { type: integer }
+                  by_space_unhandled:
+                    type: array
+                    description: 仅 admin
+                    items:
+                      type: object
+                      properties:
+                        space_id: { type: string }
+                        count: { type: integer }
 
   /api/miniapp/subscribe:
     get:
       tags: [miniapp]
       summary: 订阅额度回显
       responses:
-        "200": { $ref: "#/components/responses/Json200" }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: { type: string }
+                  templates:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        active: { type: boolean, description: 派生布尔（quota != 0） }
+                        quota: { type: integer, description: -1 长期不限次 / 0 无 / >0 一次性剩余次数 }
     post:
       tags: [miniapp]
       summary: 订阅授权
@@ -523,15 +642,15 @@ paths:
     delete:
       tags: [miniapp]
       summary: 删除绑定（admin only）
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                user_id: { type: string }
-                space_id: { type: string }
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: space_id
+          in: query
+          required: true
+          schema: { type: string }
       responses:
         "200": { $ref: "#/components/responses/Json200" }
         "403": { $ref: "#/components/responses/Error403" }
@@ -540,6 +659,11 @@ paths:
     get:
       tags: [miniapp]
       summary: 通知目标绑定列表（admin）
+      parameters:
+        - name: channel
+          in: query
+          required: true
+          schema: { type: string, enum: [wechat_miniapp, sms, dingtalk, wecom] }
       responses:
         "200": { $ref: "#/components/responses/Json200" }
     post:
@@ -551,17 +675,26 @@ paths:
           application/json:
             schema:
               type: object
+              required: [channel, user_id, external_id]
+              properties:
+                channel: { type: string, enum: [wechat_miniapp, sms, dingtalk, wecom] }
+                user_id: { type: string }
+                external_id: { type: string }
+                external_extra: { type: object }
       responses:
         "200": { $ref: "#/components/responses/Json200" }
     delete:
       tags: [miniapp]
       summary: 删除通知目标绑定（admin）
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
+      parameters:
+        - name: channel
+          in: query
+          required: true
+          schema: { type: string, enum: [wechat_miniapp, sms, dingtalk, wecom] }
+        - name: user_id
+          in: query
+          required: true
+          schema: { type: string }
       responses:
         "200": { $ref: "#/components/responses/Json200" }
 
@@ -612,15 +745,15 @@ paths:
     delete:
       tags: [miniapp]
       summary: 取消门禁标记（admin only）
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                device_id: { type: string }
-                space_id: { type: string }
+      parameters:
+        - name: space_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: device_id
+          in: query
+          required: true
+          schema: { type: string }
       responses:
         "200": { $ref: "#/components/responses/Json200" }
         "403": { $ref: "#/components/responses/Error403" }
@@ -840,5 +973,5 @@ components:
           properties:
             code:
               type: string
-              description: 稳定错误码，见 config/error_codes.json —— 400 INVALID_REQUEST、401 UNAUTHORIZED、403 FORBIDDEN、404 NOT_FOUND、409 CONFLICT、428 CONFIRM_REQUIRED、429 RATE_LIMITED、500 INTERNAL_ERROR、503 UPSTREAM_UNAVAILABLE（设备控制路径显式用 GO_BACKEND_UNAVAILABLE）
+              description: 稳定错误码，见 config/error_codes.json —— 400 INVALID_REQUEST、401 UNAUTHORIZED、403 FORBIDDEN、404 NOT_FOUND、409 CONFLICT、428 CONFIRM_REQUIRED、429 RATE_LIMITED、500 INTERNAL_ERROR、503 GO_BACKEND_UNAVAILABLE（设备列表/控制/场景 execute 内置场景）
             message: { type: string }

@@ -10,7 +10,9 @@ const env = import.meta.env
 
 export default {
   // 网关地址；真机调试改为局域网 IP，生产用 https 域名。
-  BASE_URL: env.VITE_BASE_URL || 'http://127.0.0.1:8080',
+  BASE_URL: env.VITE_BASE_URL !== undefined
+    ? env.VITE_BASE_URL
+    : 'http://127.0.0.1:8080',
   // WebSocket 地址；留空则从 BASE_URL 自动派生。
   WS_BASE_URL: env.VITE_WS_BASE_URL || '',
   // 是否走本地 mock：显式 VITE_USE_MOCK=false 才连真实网关。

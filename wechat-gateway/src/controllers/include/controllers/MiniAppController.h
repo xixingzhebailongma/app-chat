@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 
+#include "db/WechatBindingRepository.h"
 #include "services/AuthService.h"
 #include "services/DeviceControlService.h"
 
@@ -15,7 +16,8 @@ public:
         std::function<void(const drogon::HttpResponsePtr&)>;
 
     explicit MiniAppController(std::shared_ptr<AuthService> service,
-                               std::shared_ptr<DeviceControlService> deviceControl);
+                               std::shared_ptr<DeviceControlService> deviceControl,
+                               std::shared_ptr<WechatBindingRepository> bindings);
 
     void login(const drogon::HttpRequestPtr& req, Callback&& callback);
     void bind(const drogon::HttpRequestPtr& req, Callback&& callback);
@@ -31,4 +33,5 @@ public:
 private:
     std::shared_ptr<AuthService> service_;
     std::shared_ptr<DeviceControlService> deviceControl_;
+    std::shared_ptr<WechatBindingRepository> bindings_;
 };

@@ -26,19 +26,19 @@ npm run dev:h5          # 或 npm run build:h5 后静态托管 dist/build/h5
 npm run dev:mp-weixin
 ```
 
-> 默认 `USE_MOCK = true`：内置假数据镜像网关的 dev seed + mock-go-backend，
+> 默认 `VITE_USE_MOCK = true`：内置假数据镜像网关的 dev seed + mock-go-backend，
 > 打开就能看到完整界面（管理员/教师两种视角）。
 
 ## 接入真实网关
 
-编辑 `src/config.js`：
+通过 `.env` 配置（变量经 `src/config.js` 读取 `import.meta.env`）：
 
-```js
-export default {
-  BASE_URL: 'http://127.0.0.1:8080', // 网关地址；真机调试改为局域网 IP
-  USE_MOCK: false,                    // 改为 false 走真实网关
-}
+```bash
+VITE_USE_MOCK=false                  # 接真实网关必须显式置 false（默认 true 走本地 mock）
+VITE_BASE_URL=http://127.0.0.1:8080  # 网关地址；真机调试改为局域网 IP
 ```
+
+变量清单见 `.env.example`（`VITE_BASE_URL` / `VITE_WS_BASE_URL` / `VITE_USE_MOCK` / `VITE_SUBSCRIBE_TMPL_IDS`）。
 
 需先启动 `wechat-gateway`（监听 8080）与 `scripts/mock-go-backend.py`（监听 8081）。
 
@@ -53,14 +53,16 @@ export default {
 - `GET  /api/miniapp/devices?space_id=`
 - `GET  /api/miniapp/alerts` — 老师视角会脱敏 `operator_id/remark`
 - `POST /api/miniapp/alerts/{id}/handle` — 仅管理员
-- `POST /api/miniapp/device/control` — 指令白名单 `on/off/toggle`；`confirm` 兼容保留但已忽略
+- `POST /api/miniapp/device/control` — 指令白名单 `on/off/toggle`；门禁白名单 `door_devices` 设备下发 `off` 需 `confirm=true`（否则 428 `CONFIRM_REQUIRED`），`toggle` 直接 400
 - `POST /api/miniapp/subscribe`
+
+完整接口契约（字段/枚举/错误码/WS）见 `wechat-gateway/docs/前端miniapp-交接接口.md`，机器契约见 `wechat-gateway/openapi/miniapp.yaml`。
 
 ## 目录结构
 
 ```
 src/
-  config.js            # 网关地址 + USE_MOCK 开关
+  config.js            # 读取 VITE_* 环境变量（BASE_URL / USE_MOCK 开关）
   pages/               # 5 个页面
   components/          # AppTabBar / StatCard / StatusTag / EmptyState
   api/                 # index.js（接口）+ mock.js（假数据）

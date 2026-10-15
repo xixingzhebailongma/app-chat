@@ -109,6 +109,7 @@
 <script>
 import { api } from '../../api/index'
 import { store, isLoggedIn } from '../../store/index'
+import { connectWs, closeWs } from '../../utils/ws'
 import { eventTypeLabel, alertStatusLabel, alertStatusTone, formatTime } from '../../utils/format'
 import { eventTypeIcon } from '../../utils/icon'
 import StatusTag from '../../components/StatusTag.vue'
@@ -131,6 +132,9 @@ export default {
       stats: { total: 0, online: 0, offline: 0, unhandled: 0 },
       recentAlerts: [],
       redirecting: false,
+      deviceSpaceMap: {},
+      deviceStatusMap: {},
+      alertPollTimer: null,
     }
   },
   computed: {
@@ -161,6 +165,15 @@ export default {
       return
     }
     this.load()
+    this.startAlertPoll()
+  },
+  onHide() {
+    closeWs()
+    this.stopAlertPoll()
+  },
+  onUnload() {
+    closeWs()
+    this.stopAlertPoll()
   },
   onPullDownRefresh() {
     this.load()
@@ -193,6 +206,10 @@ export default {
         let online = 0
         const classrooms = spaces.map((s, i) => {
           const ds = (deviceLists[i] && deviceLists[i].devices) || []
+          ds.forEach((d) => {
+            this.deviceSpaceMap[d.device_id] = s.space_id
+            this.deviceStatusMap[d.device_id] = d.status
+          })
           const on = ds.filter((d) => d.status === 'online').length
           total += ds.length
           online += on
@@ -222,10 +239,63 @@ export default {
         this.stats.unhandled = (alerts && alerts.total) || 0
         store.unhandledAlerts = (alerts && alerts.total) || 0
         this.recentAlerts = (alerts && alerts.alerts) || []
+        this.openWs()
       } catch (e) {
         uni.showToast({ title: e.message || '加载失败', icon: 'none' })
       } finally {
         uni.stopPullDownRefresh()
+      }
+    },
+    openWs() {
+      // 首页订阅全部空间（空 space_id），实时刷新设备在线/离线计数
+      connectWs('', { onMessage: (msg) => this.applyWsMessage(msg) })
+    },
+    applyWsMessage(msg) {
+      if (!msg || msg.type !== 'device_update') return
+      const spaceId = this.deviceSpaceMap[msg.device_id]
+      if (!spaceId) return
+      const next = msg.status === 'online' ? 'online' : 'offline'
+      const old = this.deviceStatusMap[msg.device_id]
+      if (old === next) return
+      this.deviceStatusMap[msg.device_id] = next
+      const c = this.classrooms.find((x) => x.space_id === spaceId)
+      if (!c) return
+      if (old === 'online' && next === 'offline') {
+        c.online -= 1
+        c.offline += 1
+        this.stats.online -= 1
+        this.stats.offline += 1
+      } else if (old === 'offline' && next === 'online') {
+        c.online += 1
+        c.offline -= 1
+        this.stats.online += 1
+        this.stats.offline -= 1
+      }
+    },
+    startAlertPoll() {
+      this.stopAlertPoll()
+      this.alertPollTimer = setInterval(() => this.refreshAlerts(), 10000)
+    },
+    stopAlertPoll() {
+      if (this.alertPollTimer) {
+        clearInterval(this.alertPollTimer)
+        this.alertPollTimer = null
+      }
+    },
+    async refreshAlerts() {
+      try {
+        const [statsRes, alerts] = await Promise.all([
+          api.alertStats(),
+          api.alerts({ status: 'unhandled', page: 1, page_size: HOME_ALERT_LIMIT }),
+        ])
+        const unhandledMap = {}
+        ;((statsRes && statsRes.by_space_unhandled) || []).forEach((x) => { unhandledMap[x.space_id] = x.count })
+        this.classrooms.forEach((c) => { c.unhandled = unhandledMap[c.space_id] || 0 })
+        this.stats.unhandled = (alerts && alerts.total) || 0
+        store.unhandledAlerts = (alerts && alerts.total) || 0
+        this.recentAlerts = (alerts && alerts.alerts) || []
+      } catch (e) {
+        // 轮询失败静默，等待下一轮
       }
     },
     go(page) {

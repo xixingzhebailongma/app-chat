@@ -1,253 +1,335 @@
-# 边侧 go-backend 交接接口文档
+# 边侧 go-backend 对接接口文档
 
-> 说明：`wechat-gateway`（C++ Drogon）是网关/BFF，边侧 `go-backend` 是**独立外部服务**（非本仓库）。
-> 两者之间有两个方向的契约：
-> - **A 网关 → 边侧**：边侧**需要实现**、供网关调用的接口。
-> - **B 边侧 → 网关**：边侧/Agent**主动回调**网关的内部接口（`/internal/*`）。
->
-> 权威契约：`config/upstream.json`（A 面路径/字段映射）、`openapi/internal.yaml`（B 面）、`src/clients/GoBackendClient.cpp`（A 面调用实现）、`src/controllers/WsProxyController.cpp`（WS 代理）。
+> 网关 = `wechat-gateway`（C++ Drogon，本仓库）；边侧 = `go-backend`（你实现，仓库外，唯一 Go 服务）。
 
-## 修订记录（修改点标注）
+## 关键约定
 
-| 点 | 内容 | 状态 |
-|---|---|---|
-| 1 | Token 体系（设备/控制透传前端 JWT，非边侧 token） | 已更正 |
-| 2 | api_prefix 与路径拼接口径统一 | 已更正 |
-| 3 | user_spaces → 边侧 face 底库同步 | 缺口，标注待补 |
-| 4 | WS 路由与连接管理专节 | 已补 |
-| 5 | 全量同步防误删（dry_run/阈值/软删/明细） | 现状说明 + 待实现 |
-| 6 | 告警落库闭环 + 状态枚举 + handle 契约 | 已补（状态为 unhandled/handling/resolved） |
-| 7 | 场景匹配能力字段（zb_role/capabilities） | 现状说明 + 建议 |
-| 8 | wechat-gateway 与「云端 Go 后端」关系 | 已澄清（见第 0 节） |
-
-## 已知缺口清单（待排期，一行一个）
-
-| # | 缺口 | 位置 | 影响 |
-|---|---|---|---|
-| G1 | `user_spaces` 未同步到边侧 face 底库 | C.2 | 小程序绑定教室后，综合屏刷脸拉不到该教师底库 |
-| G2 | 全量同步无 `dry_run` / 阈值保护 / 软删 / 明细日志 | B.6 / B.7 | 传部分列表会真实删掉 edge 空间及其绑定/门禁标记 |
-| G3 | 设备能力字段 `zb_role` / `capabilities` 缺失 | A.7 | 场景匹配只能靠 label 关键字，存在误/漏匹配风险 |
+| 项 | 约定 |
+| --- | --- |
+| 请求地址 | `base_url + api_prefix + path`；`api_prefix` 默认 `/api`，下文路径均已含 `/api` |
+| 设备/控制鉴权 | 网关透传**前端 JWT**（`Authorization: Bearer <JWT>`，HS256，密钥 `JWT_SECRET` 两边同值）。边侧**二选一**：验签 JWT，或信任网关已做边界校验 |
+| 手机号查询鉴权 | 请求头 `X-Internal-Token: <网关内部令牌>` |
+| 数据权威 | 用户身份 / 设备 / 角色 → **边侧**；`user_spaces`（教师-教室绑定）/ `door_devices`（门禁白名单）/ 告警处理状态 / 运维日志 → **网关 PG**（Go 不建表、不实现） |
+| space_id | 所有设备/告警/人脸事件必须带 `space_id`，与 `user_spaces.space_id` 同源同值 |
 
 ---
 
-## 0. 术语与架构澄清【修改点 8】
+## A. 边侧要实现（网关 → 边侧）
 
-- **wechat-gateway 就是「云端后端」（BFF）**，C++ Drogon，本仓库。
-- 旧设计文档（含 CLAUDE.md 第七章）里的「**云端 Go 后端**」是**误称**，指的就是本仓库的 wechat-gateway。**不存在第二个云端 Go 后端**，二者是「**同一件事的两个叫法**」，不是替代、也不是并存。
-- 整个体系里**唯一的 Go 服务是边侧 go-backend**（仓库外、别人负责），它是「边侧」，不是「云端」。
-- 因此：权威用户/设备数据在**边侧 go-backend**，网关（wechat-gateway）做**代理 + 缓存 + 鉴权 + 推送**；user_spaces / door_devices / 告警处理 / 运维日志的权威在**网关 PG**（见第 C 节）。
+### 登录
 
----
+**`POST /api/auth/login`**
 
-## A. 网关 → 边侧（边侧需要实现的接口）
+无需认证。
 
-### A.1 连接与 Token 体系【修改点 1、2】
+**请求体：**
 
-**路径拼接（统一口径，避免 `/api/api/...`）**
+```json
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
 
-- `最终 URL = base_url + api_prefix + path`
-- `base_url`：`config.json → go_backend.base_url`（默认 `http://127.0.0.1:8081`，环境变量 `GO_BACKEND_URL` 覆盖）
-- `api_prefix`：默认 `/api`（无环境变量覆盖，只能改 config）
-- `path`：来自 `config/upstream.json`，**不含 `/api` 前缀**。
-- **下文 A.2~A.6 列出的路径均为「最终 URL 路径」，已含 `api_prefix`。**
+**响应（200）：**
 
-**Token 体系（三把 token，用途不同，务必分清）**
-
-| 场景 | 网关发送的头 | 说明 |
-|---|---|---|
-| 登录校验（A.2） | 无鉴权头，body 传 username/password | 边侧返回**边侧 token**；网关**不缓存、不刷新**，仅用于绑定瞬间校验账号、取回 user_id/role/name，随即丢弃并自签前端 JWT |
-| 设备列表（A.3）/ 设备控制（A.4） | `Authorization: Bearer <前端 JWT>` | **透传调用方原始前端 JWT**（网关 login/bind 签发的），**不是边侧 token，也不是 X-Internal-Token** |
-| 手机号查询（A.5） | `X-Internal-Token: <网关内部令牌>` | 短信兜底解析手机号用 |
-| WS（A.6） | 透传 `token` + `space_id` 两个 query 参数 | 见 A.6 |
-
-- **前端 JWT**：HS256，claims `{user_id, role, exp}`，密钥 `config.jwt.secret`（默认 `dev-shared-jwt-secret`，环境变量 `JWT_SECRET`），由网关签发。
-- **边侧设备接口鉴权（二选一）**：
-  1. **校验前端 JWT**：与网关共享同一 HS256 密钥（`JWT_SECRET` 两边同值），边侧自行验签后按 `user_id/role` 做授权；
-  2. **信任网关**：网关已完成空间边界校验（`canAccessSpace`）+ 门禁二次确认（`confirm`），边侧收到请求只执行、不再鉴权。
-- **密钥轮换**：`JWT_SECRET` 是网关↔边侧共享配置，轮换时两边必须同步切换。建议经配置中心统一下发，并用「双密钥过渡」（新旧各验一段窗口）避免滚动期间拒请求。
-- **边侧 token**：只在 bind 流程短暂存在（A.2 返回），网关不落库、不续期，**不要依赖它做设备接口鉴权**。
-
-### A.2 `POST /api/auth/login` —— 账号校验（`GoBackendClient::login`）
-
-网关在 `POST /api/miniapp/bind` 时调用，校验账号并取回用户身份。
-
-- 请求 body：`{"username":"...","password":"..."}`
-- 成功响应（200）：
-  ```json
-  { "token": "<边侧会话令牌>", "user": { "user_id": "...", "username": "...", "name": "...", "role": "admin|teacher" } }
-  ```
-- 约束：`user.user_id` 可为 int 或 string（网关统一规范化为十进制字符串）；`role` 缺省按 `teacher`；账号错误回 `401` + `{"message":"..."}`。
-
-### A.3 `GET /api/devices?space_id=<sid>` —— 设备列表（`DeviceService::listDevices`）
-
-- 请求头：`Authorization: Bearer <前端 JWT>`（网关已做空间边界校验后透传）。
-- 响应：设备对象**数组**（网关原样包装为 `{"devices":[...]}`）。单设备字段：
-
-  | 字段 | 说明 |
-  |---|---|
-  | `device_id` | 设备唯一 ID |
-  | `device_type` | `zigbee`（灯/门禁/传感器）/ `fuhe-screen`（综合屏）/ `fuhe-board`（班牌） |
-  | `status` | `online` / `offline` |
-  | `app` | 开关态 `on/off`；传感器为 JSON 字符串（温度/湿度/CO₂） |
-  | `label` | 显示名（场景匹配兜底用，见 A.7） |
-  | `space_id` | 空间 ID（与网关 `user_spaces.space_id` **同源同值**） |
-  | `last_seen` | ISO 时间 |
-  | 可选 | `gateway_id`、`zb_type`、`zb_role`（见 A.7）、`info` |
-
-- 边侧不可达时网关回 `503`（`GO_BACKEND_UNAVAILABLE`）。
-
-### A.4 `POST /api/devices/{device_type}/{device_id}/cmd` —— 设备控制（`DeviceControlService::control`）
-
-- 请求头：`Authorization: Bearer <前端 JWT>`。
-- 请求 body：`{"command":"on|off|toggle"}`。
-- 响应：**原样透传**（网关不解析，直接回给前端）；边侧执行后经 WS 回推 `device_update` / `cmd_response`。
-- `{device_type}` 取设备列表的 `device_type`；`{device_id}` 取 `device_id`。
-- 门禁语义（网关侧已拦）：门禁白名单内 `off` 需前端带 `confirm=true`（否则网关直接 428 不下发）、`toggle` 网关直接 400 不下发、`on` 直接下发。边侧收到 `command` 直接执行即可，不需要再判断二次确认。
-
-### A.5 `GET /api/users/{user_id}` —— 手机号查询（`GoBackendClient::getUserPhoneSync`）
-
-- 请求头：`X-Internal-Token: <网关内部令牌>`。
-- 响应：`{"user_id":"...","phone":"138..."}`；用户不存在 `404`。
-
-### A.6 `WS /ws` —— 设备实时事件源 + 连接管理【修改点 4】
-
-网关小程序侧 `/ws` 连入后，网关作为客户端连边侧 `/ws` 并透传。
-
-**连接模型（1:1 代理，不聚合）**
-
-- 每个小程序 WS 连接 → 网关**独立开一条**边侧 WS（`drogon::WebSocketClient` 每连接一个）。
-- 网关把 `token` + `space_id` 作为 query 参数透传给边侧 `/ws`；边侧按 `space_id` 订阅（空串 = 全部空间）。
-- 每条连接只订**一个 `space_id`**。管理员用空串订全部；**教师绑定多个教室时，前端一次只连一个空间**（需要多个空间 = 前端发起多条连接，或切换空间时重连）。
-
-**消息透传与路由**
-
-- 边侧 → 小程序：`device_update` / `cmd_response` / `ping` **原样逐条转发**，网关**不按 device_id 路由、不聚合、不过滤**；`cmd_response` 是边侧按空间广播，网关原样回给该连接，**由小程序前端自己按 device_id 匹配**（对应 `devices.vue` 的 onMessage）。
-- 小程序 → 边侧：原样透传。
-
-**断线与重连**
-
-| 事件 | 网关行为 | 重连责任 |
-|---|---|---|
-| 边侧 WS 断开 | 网关**主动关闭**对应的小程序连接（`forceClose`），**不自动重连边侧** | 由小程序侧重新发起 `/ws` 连接 |
-| 小程序连接断开 | 网关**停止**对应的边侧客户端 | 前端 `onShow`/`onClose` 重新 `connectWs` |
-
-**结论**：网关是纯透传代理，不缓存连接、不重连、不按 device_id 分流；重连与 device_id 匹配都在前端。
-
-### A.7 设备能力字段与场景匹配【修改点 7】
-
-**现状（真实边侧无 `zb_role`）**
-
-- 场景匹配（`SceneDefinitions.h`）：`device_type` **精确匹配**（唯一必填）+ `label` 关键字兜底（`label_include` 命中 / `label_exclude` 排除，大小写不敏感）。
-- `zb_role` 在规则里是**保留字段**，真实边侧设备列表无 `zb_role` 时留空、纯靠 label。
-- 风险：label 是管理员可改的，关键字匹配存在误匹配/漏匹配风险（当前用关键字列表 + `label_exclude` 缓解）。
-
-**建议（待边侧补字段）**
-
-- 边侧设备对象**新增能力字段**（`zb_role` 或 `capabilities`，如 `light` / `door` / `screen` / `sign` / `sensor`）。
-- 场景匹配**优先用能力字段**，`label` 关键字仅做兜底。边侧补字段后，`SceneDefinitions.h` 的 `zb_role` 即可启用优先级匹配。
-
----
-
-## B. 边侧 → 网关（边侧/Agent 调用的内部接口）
-
-- 鉴权：请求头 `X-Internal-Token`（`config.internal_token`，环境变量 `INTERNAL_TOKEN` 覆盖；dev 默认 `dev-internal-token`）。错误令牌 → `401`。
-- **全部 `POST`，全部走 `/internal/*`，不对小程序/前端开放。**
-
-### B.1 `POST /internal/notify/send` —— 告警/事件推送入口 + 落库闭环【修改点 6】
-
-- body（`event_type`、`content` 必填）：
-  ```json
-  {
-    "event_type": "device_offline | sensor_threshold | face_login_failed | peripheral_offline",
-    "content": "综合屏离线",
-    "event_id": "alt_xxx",            // 有则落库（alert_id=event_id），缺省只推送不落库
-    "space_id": "spc_...",
-    "device_id": "dev_...",
-    "device_label": "A101 综合屏",
-    "severity": "warning",
-    "transition": "online->offline",  // 防御性复核用
-    "duration_sec": 300,              // 缺省/哨兵值(-1)不抑制
-    "consecutive": 3,
-    "offline_minutes": 30
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "user_id": 1,
+    "username": "admin",
+    "name": "管理员",
+    "role": "admin"
   }
-  ```
-- **落库约定**：凡「需要管理员在小程序里查看历史 / 标记处理 / 写备注」的告警，**必须带 `event_id`** 才会落库；缺 `event_id` 只推送、不落库（之后无法处理）。
-- 语义：网关负责「推给谁、怎么推、冷却」；**触发条件判断（在线变离线/持续5分钟/连续≥3次/离线30分钟）在边侧**，网关只做防御性复核（字段缺失时不抑制）。
-- 事件类型 4 类，未知类型跳过；冷却 1800s（键 `event_type+device_id+user+channel`）。
+}
+```
 
-**告警状态与处理闭环（小程序侧，非边侧）**
+**错误响应：**
 
-- 告警状态枚举（**三态**）：`unhandled`（未处理）→ `handling`（处理中）→ `resolved`（已解决）。**不是 pending/processing/resolved**。
-- 处理接口（管理员）：`POST /api/miniapp/alerts/{id}/handle`，body `{"status":"handling|resolved","remark":"..."}`，响应 200；会写运维日志（`operation_logs`），详情见《前端 miniapp 交接接口文档》3.5 节。
+| 状态码 | 说明 |
+| --- | --- |
+| 400 | 用户名或密码为空 |
+| 401 | 用户名或密码错误 |
 
-### B.2 `POST /internal/notify/subscribe-send` —— 小程序订阅消息单发
+> `user_id` 可为 int 或 string（网关统一转字符串）；`role` 仅 `admin` / `teacher`。
 
-- body：`{openid, template_id, data:{"thing1":"v1",...}, page?, miniprogram_state?}`（前三者必填）。
-- 响应：`{success, channel, errcode, errmsg}`。
+### 获取本空间设备列表
 
-### B.3 `POST /internal/oa/arrival-notify` —— 家长到校通知
+**`GET /api/devices?space_id={space_id}`**
 
-- body：`{student_no, student_name, space_id, space_name, arrival_time, event_id?, event_type? arrival|leave}`。
-- 响应：`{accepted, notify_id, final_status: no_parent_binding|skipped|success|failed|duplicate, channel: wechat_oa|none, reason}`。
+返回指定空间下的所有设备。`space_id` 为必传参数，取综合屏本机的 `space_id`。
 
-### B.4 `POST /internal/user-roles/sync` —— 角色全量同步（幂等）
+**请求参数：**
 
-- body：`{user_id, roles:["teacher"]}`；`roles` 空数组 = 清空该用户全部角色。
-- 用途：go-backend 权威角色回灌网关 `user_roles`（只读缓存）；网关 `JwtFilter` 每请求实时覆盖 JWT 内嵌 role（60s 缓存），**同步后无需重新登录**。
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `space_id` | string | 是 | 综合屏所在空间 ID，从本机 `fuhe_identity.json` 读取 |
 
-### B.5 `POST /internal/access-records` —— 进出记录回灌（`event_id` 幂等）
+**响应（200）：** 设备对象数组（网关会包装为 `{"devices":[...]}` 给小程序，边侧直接返回数组即可）。
 
-- body：`{event_id, space_id, occurred_at, user_id?, name?, auth_type?, result?, device_id?}`（前三者必填）。
+```json
+[
+  {
+    "device_id": "dev_c2936745",
+    "device_type": "fuhe-screen",
+    "status": "online",
+    "app": "on",
+    "info": "{}",
+    "label": "综合屏",
+    "space_id": "spc_38633fd5",
+    "last_seen": "2026-09-11T04:52:49Z"
+  },
+  {
+    "device_id": "ZB_aabbcc112233",
+    "device_type": "zigbee",
+    "status": "online",
+    "app": "on",
+    "label": "教室灯",
+    "zb_type": "switch",
+    "gateway_id": "dev_c2936745",
+    "space_id": "spc_38633fd5",
+    "last_seen": "2026-09-11T04:53:04Z"
+  },
+  {
+    "device_id": "ZB_112233aabbcc",
+    "device_type": "zigbee",
+    "status": "online",
+    "app": "{\"temperature\":25.1,\"humidity\":60}",
+    "label": "温湿度传感器",
+    "zb_type": "sensor",
+    "gateway_id": "dev_c2936745",
+    "space_id": "spc_38633fd5",
+    "last_seen": "2026-09-11T04:53:04Z"
+  }
+]
+```
 
-### B.6 `POST /internal/spaces/sync` —— 空间生命周期全量同步【修改点 5】
+**字段说明：**
 
-- body：`{spaces:[{space_id, name, type}, ...]}`（**必须全量**）。
-- 响应：`{ok, upserted, removed}`（**仅返回计数**）。
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `device_id` | string | 设备唯一标识 |
+| `device_type` | string | 设备类型：`zigbee`（Zigbee 子设备）/ `fuhe-screen`（综合屏）/ `fuhe-board`（电子班牌）/ `fuhe-encoder`（编码器）等 |
+| `status` | string | **网络连接状态**：`online` / `offline`。与 `app` 是独立维度，在线不代表开关是开的 |
+| `app` | string\|null | **应用层状态**：开关类为 `"on"`/`"off"`；传感器为 JSON 字符串（温湿度、CO₂ 等）；离线时为上次已知状态或 `null` |
+| `info` | string\|null | **运行指标**（仅 fuhe 类设备）：JSON 字符串，推流状态、CPU/内存等；无指标为 `{}`；Zigbee 设备无此字段 |
+| `label` | string\|null | 设备显示名（管理员可改） |
+| `zb_type` | string | 仅 Zigbee 设备：`switch`（开关）/ `sensor`（传感器）/ 空字符串（未分类） |
+| `gateway_id` | string | 仅 Zigbee 设备：上级综合屏的 `device_id` |
+| `space_id` | string\|null | 所属空间 ID |
+| `last_seen` | string\|null | 最后上报时间（UTC ISO 8601） |
 
-**当前删除规则（比「未列出即删」更精确）**
+**传感器 `app` 数据格式（JSON 字符串）：**
 
-- 只删「`source=edge` 且不在本次列表里」的空间；**`source=admin` 的空间永不删**（网关管理员建的教室不被边侧覆盖）。
-- 被删空间会**级联清理** `user_spaces` / `door_devices`。
-- **现状缺口**：无 `dry_run`、无删除比例阈值保护、无软删除/恢复窗口、无逐条 upserted/removed 明细日志。**传部分列表会真实删掉 edge 空间及其绑定/门禁标记，务必传全量。**
+```json
+{
+  "temperature": 25.1,
+  "humidity": 60,
+  "co2": 800,
+  "illuminance": 300,
+  "pressure": 1013,
+  "pm25": 12,
+  "tvoc": 50,
+  "occupancy": true
+}
+```
 
-**建议（待实现）**
+传感器只含其支持的字段，不支持的字段不出现。
 
-1. 加 `dry_run` 参数，先返回「将删除的空间列表」。
-2. 加删除阈值保护（如本次 `removed` 超过现存 edge 空间的一定比例则拒绝）。
-3. 软删除 + 恢复窗口（替代硬删）。
-4. 记录本次 upserted / removed 的逐条明细（写入运维日志）。
+### 控制设备
 
-### B.7 `POST /internal/student-parents/sync` —— 学生花名册全量同步【修改点 5】
+**`POST /api/devices/{device_type}/{device_id}/cmd`**
 
-- body：`{parents:[{student_no, parent_phone, student_name, relation, status: active|inactive}, ...]}`（**必须全量**）。
-- 响应：`{ok, upserted, removed}`。
-- 同 B.6 的现状缺口：无 `dry_run`/阈值保护/明细日志，建议一并补齐。
+向指定设备下发控制指令。`device_type` 为设备类型，Zigbee 设备传 `zigbee`。
+
+**路径参数：**
+
+| 参数 | 说明 |
+| --- | --- |
+| `device_type` | 设备类型，如 `zigbee` |
+| `device_id` | 目标设备 ID，如 `ZB_aabbcc112233` |
+
+**请求体：**
+
+```json
+{
+  "command": "on"
+}
+```
+
+**`command` 可选值：**
+
+| 值 | 说明 |
+| --- | --- |
+| `on` | 开 |
+| `off` | 关 |
+| `toggle` | 切换（开→关 / 关→开） |
+
+**响应（200）：**
+
+```json
+{
+  "status": "ok",
+  "topic": "dev_ed1ce280/zigbee/cmd"
+}
+```
+
+> 响应网关原样透传给小程序。门禁二次确认（`confirm`）在网关侧完成，边侧收到 `command` 直接执行即可。
+
+### 手机号查询
+
+**`GET /api/users/{user_id}`**
+
+请求头：`X-Internal-Token`。短信兜底时解析收件人手机号用。
+
+**响应（200）：**
+
+```json
+{ "user_id": "u_admin_1", "phone": "13800000001" }
+```
+
+用户不存在返回 `404`。
+
+### 设备实时事件（WebSocket）
+
+**`WS /ws?token=<JWT>&space_id=<sid>`**
+
+网关透传小程序侧 `/ws`（1:1 代理，每条小程序连接 = 一条边侧 WS；`space_id` 空 = 全部空间）。边侧主动广播：
+
+| 消息 | 内容 |
+| --- | --- |
+| `device_update` | `{ "type":"device_update", "device_id":"...", "status":"online|offline", "app":"on|off|JSON" }` |
+| `cmd_response` | `{ "type":"cmd_response", "device_id":"...", "command":"on|off|toggle" }` |
+| `ping` | 心跳 |
+
+边侧断线 → 网关关闭对应小程序连接（网关不自动重连边侧），重连由小程序重新发起。
 
 ---
 
-## C. 数据权威性划分 + user_spaces 同步【修改点 3】
+## B. 边侧调用网关（边侧 → 网关）
 
-### C.1 谁拥有什么
+全部 `POST`，请求头 `X-Internal-Token`，路由 `/internal/*`（**不对外**）。
 
-| 数据 | 权威方 | 网关角色 |
-|---|---|---|
-| 用户账号/密码校验 | go-backend | 代理（bind 走边侧 login） |
-| 用户角色（admin/teacher） | go-backend | `user_roles` 只读缓存（经 `/internal/user-roles/sync` 全量回灌） |
-| 设备 / 设备状态 | go-backend | 代理 + 缓存（`/api/devices`、`/ws`） |
-| 教师↔教室绑定（user_spaces） | **网关 PG** | `SpaceBindingService` / `/api/miniapp/space-bindings`，Go 不实现 |
-| 门禁白名单（door_devices） | **网关 PG** | 设备页「标记门禁」，Go 不实现 |
-| 告警处理状态 / 运维日志 | **网关 PG** | `/api/miniapp/alerts/{id}/handle` + operation-logs，Go 不实现 |
-| 空间（space_id 权威） | 边侧回灌 + 网关 admin 增删改 | `/internal/spaces/sync`（仅管 edge 空间）+ `/api/admin/spaces`（admin 空间） |
-| 花名册（家长绑定源） | 边侧/学校 | `/internal/student-parents/sync` 全量回灌 |
+### 告警/事件推送
 
-### C.2 user_spaces → 边侧 face 底库【缺口，待补】
+**`POST /internal/notify/send`**
 
-- **现状**：网关 PG 的 `user_spaces`（教师↔教室绑定）**不会同步到边侧**；网关侧没有向边侧推送绑定关系的接口。
-- **影响**：若边侧综合屏人脸识别需要「`GET /api/face/gallery?space_id=` 返回本空间已授权教师底库」，那么**小程序里绑定了教室，边侧底库拉不到该教师**——两端不一致。
-- **待补**（需与边侧约定）：
-  1. 同步**方向**：网关主动推给边侧（新增 `/internal/*` 推送）或边侧定时拉取（新增网关查询接口）。
-  2. 同步**频率**：实时/准实时（绑定变更即触发）或定时对账。
-  3. **冲突裁决**：`user_spaces` 权威在网关 PG，边侧底库以网关为准；边侧不可反向改。
-  4. 删除同样要全量/增量语义清晰，避免残留。
+**请求体：**
 
-**关键约束（不变）**：所有设备/告警/人脸/刷卡事件必须带 `space_id`，且与 `user_spaces.space_id` **同源同值**；教师「仅本人绑定教室」即网关拿 `user_spaces.space_id` 匹配这些 `space_id`，不同源会导致教师端全空。
+```json
+{
+  "event_type": "device_offline",
+  "content": "综合屏离线",
+  "event_id": "alt_xxx",
+  "space_id": "spc_...",
+  "device_id": "dev_...",
+  "device_label": "A101 综合屏"
+}
+```
+
+- `event_type` 仅 4 类：`device_offline` / `sensor_threshold` / `face_login_failed` / `peripheral_offline`。
+- **带 `event_id` 才落库**（`alert_id = event_id`），缺省只推送不落库、之后无法处理。
+- 触发条件（在线变离线/持续 5 分钟/连续 ≥3 次/离线 30 分钟）由**边侧**判断，网关只做防御性复核；冷却 1800s（键 `event_type+device_id+user+channel`）。
+
+**响应（200）：** `{"ok": true}`。
+
+### 小程序订阅消息单发
+
+**`POST /internal/notify/subscribe-send`**
+
+**请求体：**
+
+```json
+{ "openid": "oxxx", "template_id": "tmpl_xxx", "data": { "thing1": "值" } }
+```
+
+**响应：** `{"success":true,"channel":"wechat_miniapp","errcode":0,"errmsg":""}`。
+
+### 家长到校通知
+
+**`POST /internal/oa/arrival-notify`**
+
+**请求体：**
+
+```json
+{
+  "student_no": "20260101",
+  "student_name": "张三",
+  "space_id": "spc_...",
+  "space_name": "A101 教室",
+  "arrival_time": "2026-09-11T08:12:00Z"
+}
+```
+
+**响应：** `{"accepted":true,"final_status":"success|no_parent_binding|skipped|failed|duplicate","channel":"wechat_oa|none"}`。
+
+### 角色全量同步（幂等）
+
+**`POST /internal/user-roles/sync`**
+
+**请求体：**
+
+```json
+{ "user_id": "u_teacher_1", "roles": ["teacher"] }
+```
+
+`roles` 空数组 = 清空该用户全部角色。同步后网关实时生效，无需重新登录。
+
+### 进出记录回灌（`event_id` 幂等）
+
+**`POST /internal/access-records`**
+
+**请求体：**
+
+```json
+{
+  "event_id": "evt_xxx",
+  "space_id": "spc_...",
+  "occurred_at": "2026-09-11T08:12:00Z",
+  "name": "张三",
+  "auth_type": "face",
+  "result": "login"
+}
+```
+
+### 空间全量同步（⚠️ 必须全量）
+
+**`POST /internal/spaces/sync`**
+
+**请求体：**
+
+```json
+{ "spaces": [ { "space_id": "spc_...", "name": "A101 教室", "type": "standard" } ] }
+```
+
+**响应：** `{"ok":true,"upserted":1,"removed":0}`。
+
+- 只删「`source=edge` 且未列出」的空间，`source=admin`（管理员建的）**永不删**；被删空间级联清理 `user_spaces`/`door_devices`。
+- **传部分列表会真实删除 edge 空间**，务必传全量。
+
+### 花名册全量同步（⚠️ 必须全量）
+
+**`POST /internal/student-parents/sync`**
+
+**请求体：**
+
+```json
+{
+  "parents": [
+    { "student_no": "20260101", "parent_phone": "13800000000", "student_name": "张三", "relation": "父亲", "status": "active" }
+  ]
+}
+```
+
+**响应：** `{"ok":true,"upserted":1,"removed":0}`。
+
+---
+
+## C. 已知缺口（待补，非已实现）
+
+| # | 缺口 | 影响 |
+| --- | --- | --- |
+| G1 | `user_spaces` 未同步到边侧 face 底库 | 小程序绑定教室后，综合屏刷脸拉不到该教师底库 |
+| G2 | 全量同步无 `dry_run`/阈值保护/软删/明细日志 | 传部分列表会删 edge 空间及绑定/门禁标记 |
+| G3 | 设备无 `zb_role`/`capabilities` 能力字段 | 场景匹配只能靠 `label` 关键字，存在误/漏匹配 |

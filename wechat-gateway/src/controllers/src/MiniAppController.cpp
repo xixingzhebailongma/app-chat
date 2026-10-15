@@ -9,9 +9,11 @@
 
 MiniAppController::MiniAppController(
     std::shared_ptr<AuthService> service,
-    std::shared_ptr<DeviceControlService> deviceControl)
+    std::shared_ptr<DeviceControlService> deviceControl,
+    std::shared_ptr<WechatBindingRepository> bindings)
     : service_(std::move(service)),
-      deviceControl_(std::move(deviceControl)) {}
+      deviceControl_(std::move(deviceControl)),
+      bindings_(std::move(bindings)) {}
 
 void MiniAppController::login(const drogon::HttpRequestPtr& req,
                               Callback&& callback) {
@@ -62,8 +64,11 @@ void MiniAppController::bind(const drogon::HttpRequestPtr& req,
 void MiniAppController::me(const drogon::HttpRequestPtr& req,
                            Callback&& callback) {
     const auto id = request_util::identity(req);
-    callback(http_util::ok(
-        nlohmann::json{{"user_id", id.user_id}, {"role", id.role}}));
+    const auto binding = bindings_->findByUser("miniapp", id.user_id);
+    const std::string name = binding ? binding->name : "";
+    callback(http_util::ok(nlohmann::json{{"user_id", id.user_id},
+                                          {"role", id.role},
+                                          {"name", name}}));
 }
 
 void MiniAppController::deviceControl(const drogon::HttpRequestPtr& req,

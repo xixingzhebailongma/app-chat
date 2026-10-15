@@ -800,7 +800,7 @@ int main() {
     auto notifyCtrl = std::make_shared<NotifyController>(notifyService);
     auto oaCtrl = std::make_shared<OaController>(oaService, oaBindService);
     auto miniAppCtrl = std::make_shared<MiniAppController>(
-        authService, deviceControlService);
+        authService, deviceControlService, wechatBindingRepo);
     auto sceneCtrl = std::make_shared<SceneController>(sceneService);
     auto deviceCtrl =
         std::make_shared<DeviceController>(deviceService);
