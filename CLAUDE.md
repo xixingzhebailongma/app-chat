@@ -84,14 +84,17 @@ role 字面量仅 admin / teacher。/internal/user-roles/sync 回灌 roles[]、/
 当前进出记录（今日人脸识别登录列表）
 ② 设备场景快捷控制
 
-一键执行预设场景，无需逐个操作设备。场景走 `POST /api/miniapp/scene/execute`
-（body `{space_id, scene_id}`，`scene_id ∈ lesson_on / lesson_off`）；对外契约见
-`openapi/miniapp.yaml`。编排与鉴权在 C++ 网关 `SceneService.cpp`（先 `canAccessSpace`
-再枚举下发），场景规则在 `SceneDefinitions.h`。Go 不实现场景，只提供
+一键执行预设场景，无需逐个操作设备。场景为可按教室增删改的实体，对外契约见
+`openapi/miniapp.yaml`：列表 `GET /api/miniapp/scenes?space_id=`、创建 `POST
+/api/miniapp/scenes`、改/删 `PUT|DELETE /api/miniapp/scenes/{scene_id}`、执行
+`POST /api/miniapp/scenes/{scene_id}/execute`（无 body）。每个空间首次懒种两个内置
+场景「开启模式 / 离开模式」（`kind = all_on / all_off`），自定义场景 `kind = custom`。
+编排与鉴权在 C++ 网关 `SceneService.cpp`（先 `canAccessSpace` 再下发），内置场景按
+`SceneDefinitions.h` 规则枚举匹配下发。Go 不实现场景，只提供
 `GET /api/devices?space_id=` 与 `POST /api/devices/{type}/{id}/cmd`。
 
-- 上课模式（`lesson_on`）：开灯 + 唤醒综合屏 + 开班牌
-- 离开模式（`lesson_off`）：关灯 + 关屏 + 关班牌，不碰门锁
+- 开启模式（内置「开启模式」，`kind=all_on`）：开灯 + 唤醒综合屏 + 开班牌
+- 离开模式（内置「离开模式」，`kind=all_off`）：关灯 + 关屏 + 关班牌，不碰门锁
 - 个别设备的单独开关控制走 `POST /api/miniapp/device/control`（`on/off/toggle`，适合简单开关类操作，不适合需要实时反馈的连续调节）
 
 场景实现说明（2026-09 落定，规则已落地在 `SceneDefinitions.h`）：
@@ -192,7 +195,7 @@ zigbee 开关（zb_role=door，off=开锁）。因此：远程重启从 roadmap 
 控制指令鉴权（as-built）
 
 - `DeviceControlService` → `authz::canAccessSpace`：admin 全放行，teacher 仅本人绑定空间，否则 403；通过后转发边侧 `/api/devices/{type}/{id}/cmd`。
-- `SceneService`（`/api/miniapp/scene/execute`）→ 同样先 `authz::canAccessSpace`，再按 `SceneDefinitions.h` 展开为单设备 on/off 下发。
+- `SceneService`（`/api/miniapp/scenes/{scene_id}/execute`）→ 同样先 `authz::canAccessSpace`；`all_on/all_off` 内置场景按 `SceneDefinitions.h` 枚举匹配展开为单设备 on/off 下发，`custom` 场景按 `device_states` 精确下发。
 - 门禁二次确认：`door_devices` 白名单，off 需 `confirm=true`（否则 428），toggle 直接 400。
 
 设备单控与场景执行的鉴权均在 C++ 网关（`canAccessSpace`）完成，边侧 go-backend 不重复鉴权、不建 `user_spaces`。
