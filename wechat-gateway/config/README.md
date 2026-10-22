@@ -20,8 +20,8 @@
 
 所有字段在 `custom_config` 之下。字段一览：
 
-`listen_port` · `internal_token` · `jwt` · `wechat` · `go_backend` · `redis` ·
-`postgres` · `operation_log` · `notify`
+`listen_port` · `internal_token` · `jwt` · `wechat` · `go_backend` · `llm` ·
+`redis` · `postgres` · `operation_log` · `notify`
 
 ## 各字段说明
 
@@ -50,6 +50,16 @@
 - `base_url`：go-backend 基址，默认 `http://127.0.0.1:8081`。经 `GO_BACKEND_URL` 覆盖。
 - `api_prefix`：网关转发到边侧时补的前缀，默认 `/api`。
 - 拼接规则：`base_url + api_prefix + 路径`（`GoBackendClient`）。
+
+### llm —— 本地大模型（7.10 AI 助手）
+- `base_url`：本地 Qwen（llama.cpp llama-server）基址，OpenAI 兼容，默认 `http://127.0.0.1:8000/v1`。经 `LLM_BASE_URL` 覆盖。
+- `model`：模型名，默认 `qwen3.6`。经 `LLM_MODEL` 覆盖。
+- `api_key`：鉴权 key（服务未开启 `--api-key` 时可留任意占位值）。经 `LLM_API_KEY` 覆盖。
+- `enable_thinking`：是否开启思考。工具路由/问答建议 `false` 以降低延迟。
+- `timeout_ms`：单次 LLM 请求超时，默认 `30000`。
+- `max_tokens`：单次回复生成上限，默认 `2048`。
+- `max_tool_iters`：单次对话最多工具调用轮数（护栏），默认 `5`。
+- `enable_device_control`：是否注册 `control_device` 单设备开关工具，默认 `false`（首期只读 + `execute_scene`）。开启后该工具**仍仅 admin 可用**，门禁 `off/toggle` 仍命中二次确认门槛、不会自动执行。
 
 ### redis
 - `host` / `port` / `password`：支撑 `wechat:token:{miniapp,oa}`、刷新锁、通知冷却。

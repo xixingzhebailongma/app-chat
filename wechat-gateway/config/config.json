@@ -22,6 +22,16 @@
       "base_url": "http://127.0.0.1:8081",
       "api_prefix": "/api"
     },
+    "llm": {
+      "base_url": "http://192.168.102.128:8000/v1",
+      "model": "qwen3.6",
+      "api_key": "sk-xxx",
+      "enable_thinking": false,
+      "timeout_ms": 30000,
+      "max_tokens": 2048,
+      "max_tool_iters": 5,
+      "enable_device_control": false
+    },
     "redis": {
       "host": "",
       "port": 6379,

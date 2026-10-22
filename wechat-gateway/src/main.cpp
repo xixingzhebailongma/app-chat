@@ -22,7 +22,9 @@
 #include "clients/WechatClient.h"
 #include "clients/WechatTokenManager.h"
 #include "clients/FallbackNotifyTargetResolver.h"
+#include "clients/QwenClient.h"
 #include "controllers/AccessRecordController.h"
+#include "controllers/AiController.h"
 #include "controllers/AlertController.h"
 #include "controllers/DeviceController.h"
 #include "controllers/DoorDeviceController.h"
@@ -82,6 +84,8 @@
 #include "filters/InternalTokenFilter.h"
 #include "filters/JwtFilter.h"
 #include "services/AccessRecordService.h"
+#include "services/AiService.h"
+#include "services/AiTools.h"
 #include "services/AlertService.h"
 #include "services/AuthService.h"
 #include "services/DeviceControlService.h"
@@ -248,11 +252,39 @@ int main() {
     std::string goBackendApiPrefix =
         cc["go_backend"].get("api_prefix", "/api").asString();
 
+    // 本地大模型（Qwen / OpenAI 兼容，设计文档 7.10 AI 助手）。base_url 指向
+    // llama.cpp llama-server；enable_thinking=false 降低工具路由延迟。
+    std::string llmBaseUrl =
+        cc["llm"].get("base_url", "http://127.0.0.1:8000/v1").asString();
+    std::string llmModel = cc["llm"].get("model", "qwen3.6").asString();
+    std::string llmApiKey = cc["llm"].get("api_key", "").asString();
+    bool llmEnableThinking = cc["llm"].get("enable_thinking", false).asBool();
+    int llmMaxTokens = cc["llm"].get("max_tokens", 2048).asInt();
+    int llmMaxToolIters = cc["llm"].get("max_tool_iters", 5).asInt();
+    // 首期收口：单设备控制默认关；开启后 control_device 仍仅 admin 可用。
+    bool llmEnableDeviceControl =
+        cc["llm"].get("enable_device_control", false).asBool();
+    double llmTimeoutMs = cc["llm"].get("timeout_ms", 30000).asDouble();
+    if (const char* env = std::getenv("LLM_BASE_URL"); env && *env) {
+        llmBaseUrl = env;
+    }
+    if (const char* env = std::getenv("LLM_MODEL"); env && *env) {
+        llmModel = env;
+    }
+    if (const char* env = std::getenv("LLM_API_KEY"); env && *env) {
+        llmApiKey = env;
+    }
+
     // go-backend 客户端提前构造：短信兜底的手机号实时查询依赖它，
     // 而渠道在下方装配（内部调用用 X-Internal-Token）。
     auto goBackendClient = std::make_shared<GoBackendClient>(goBackendUrl);
     goBackendClient->setInternalToken(internalToken);
     goBackendClient->setApiPrefix(goBackendApiPrefix);
+
+    // 本地 Qwen 大模型客户端（同步阻塞 HTTP，仅在 /api/ai/chat 的 worker 线程
+    // 上使用，绝不在事件循环线程调用）。
+    auto qwenClient = std::make_shared<QwenClient>(
+        llmBaseUrl, llmApiKey, llmModel, llmTimeoutMs / 1000.0);
 
     // Redis（设计文档 十）：支撑 wechat:token:{miniapp,oa}、刷新
     // 锁与通知冷却。host 为空 => 进程内回退（开发）。
@@ -796,6 +828,13 @@ int main() {
     auto notifyBindingService =
         std::make_shared<NotifyBindingService>(notifyBindingRepo);
 
+    // AI 助手（设计文档 7.10）：工具层复用现有服务，编排层驱动 Qwen 函数调用循环。
+    auto aiTools = std::make_shared<AiTools>(
+        deviceService, deviceControlService, sceneService, alertService,
+        accessRecordService, spaceRepo, userSpacesRepo, llmEnableDeviceControl);
+    auto aiService = std::make_shared<AiService>(
+        qwenClient, aiTools, llmEnableThinking, llmMaxTokens, llmMaxToolIters);
+
     // 控制器。
     auto notifyCtrl = std::make_shared<NotifyController>(notifyService);
     auto oaCtrl = std::make_shared<OaController>(oaService, oaBindService);
@@ -827,6 +866,7 @@ int main() {
         std::make_shared<StudentParentSyncController>(studentParentSyncService);
     auto notifyBindingCtrl =
         std::make_shared<NotifyBindingController>(notifyBindingService);
+    auto aiCtrl = std::make_shared<AiController>(aiService);
 
     // WebSocket 代理控制器依赖注入（边侧 /ws 转发，设计文档 7.4②）。
     // 控制器本身由 Drogon 按类名自动创建（WebSocketController 自动注册），
@@ -1280,6 +1320,14 @@ int main() {
             spaceTypeCtrl->reorder(req, std::move(cb));
         },
         {Patch, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/ai/chat",
+        [aiCtrl](const HttpRequestPtr& req,
+                 std::function<void(const HttpResponsePtr&)>&& cb) {
+            aiCtrl->chat(req, std::move(cb));
+        },
+        {Post, std::string("JwtFilter")});
 
     LOG_INFO << "wechat-gateway listening on 0.0.0.0:" << port;
     app().run();

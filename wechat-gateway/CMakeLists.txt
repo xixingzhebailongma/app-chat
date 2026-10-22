@@ -78,6 +78,7 @@ add_executable(wechat-gateway
     src/controllers/src/MiniAppController.cpp
     src/controllers/src/DeviceController.cpp
     src/controllers/src/AccessRecordController.cpp
+    src/controllers/src/AiController.cpp
     src/controllers/src/SpaceBindingController.cpp
     src/controllers/src/NotifyBindingController.cpp
     src/controllers/src/SpaceController.cpp
@@ -100,6 +101,8 @@ add_executable(wechat-gateway
     src/services/src/SceneService.cpp
     src/services/src/DeviceService.cpp
     src/services/src/AccessRecordService.cpp
+    src/services/src/AiService.cpp
+    src/services/src/AiTools.cpp
     src/services/src/SpaceBindingService.cpp
     src/services/src/NotifyBindingService.cpp
     src/services/src/SpaceService.cpp
@@ -119,6 +122,7 @@ add_executable(wechat-gateway
     src/clients/src/WechatClient.cpp
     src/clients/src/WechatTokenManager.cpp
     src/clients/src/GoBackendClient.cpp
+    src/clients/src/QwenClient.cpp
     src/clients/src/SmsClient.cpp
     src/clients/src/AliyunSmsProvider.cpp
     src/clients/src/TencentSmsProvider.cpp
@@ -297,6 +301,25 @@ target_include_directories(alert_service_test PRIVATE ${GATEWAY_INCLUDE_DIRS})
 target_link_libraries(alert_service_test PRIVATE
     Drogon::Drogon nlohmann_json::nlohmann_json)
 add_test(NAME alert_service_test COMMAND alert_service_test)
+
+# AI 助手服务单测 —— 假 LLM（ILLMClient）+ 内存仓库，覆盖函数调用循环 /
+# 坏 JSON / 未知工具 / LLM 不可达 / 迭代上限 / control_device 收口；
+# 无真实 Qwen / 网络 / Postgres / go-backend。
+add_executable(ai_service_test
+    tests/test_ai_service.cpp
+    src/services/src/AiService.cpp
+    src/services/src/AiTools.cpp
+    src/services/src/SceneService.cpp
+    src/services/src/AlertService.cpp
+    src/services/src/AccessRecordService.cpp
+    src/services/src/DeviceService.cpp
+    src/services/src/DeviceControlService.cpp
+    src/clients/src/GoBackendClient.cpp
+)
+target_include_directories(ai_service_test PRIVATE ${GATEWAY_INCLUDE_DIRS})
+target_link_libraries(ai_service_test PRIVATE
+    Drogon::Drogon nlohmann_json::nlohmann_json)
+add_test(NAME ai_service_test COMMAND ai_service_test)
 
 # 模板 ID 权威来源单测 —— 纯内存，无真实依赖。
 add_executable(subscription_service_test
