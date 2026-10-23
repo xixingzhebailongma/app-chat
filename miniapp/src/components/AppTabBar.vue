@@ -36,6 +36,7 @@ export default {
           { key: 'classroom', label: '教室', icon: TAB_ICONS.classroom },
           { key: 'devices', label: '设备', icon: TAB_ICONS.devices },
           { key: 'alerts', label: '告警', icon: TAB_ICONS.alerts },
+          { key: 'ai', label: 'AI', icon: TAB_ICONS.ai },
           { key: 'profile', label: '我的', icon: TAB_ICONS.profile },
         ]
       }
@@ -43,6 +44,7 @@ export default {
         { key: 'home', label: '首页', icon: TAB_ICONS.home },
         { key: 'devices', label: '设备', icon: TAB_ICONS.devices },
         { key: 'alerts', label: '告警', icon: TAB_ICONS.alerts },
+        { key: 'ai', label: 'AI', icon: TAB_ICONS.ai },
         { key: 'profile', label: '我的', icon: TAB_ICONS.profile },
       ]
     },

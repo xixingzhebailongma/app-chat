@@ -56,9 +56,15 @@ void AuthService::bind(const std::string& openidToken,
     goBackend_->login(
         username, password, [this, cb, openid = *openid](const GoBackendLogin& r) {
             if (!r.ok) {
-                cb(AuthResult::error(drogon::k401Unauthorized,
-                                     r.errmsg.empty() ? "invalid credentials"
-                                                      : r.errmsg));
+                if (r.transport_error) {
+                    cb(AuthResult::errorWithCode(drogon::k503ServiceUnavailable,
+                                                 "GO_BACKEND_UNAVAILABLE",
+                                                 "go-backend unreachable"));
+                } else {
+                    cb(AuthResult::error(drogon::k401Unauthorized,
+                                         r.errmsg.empty() ? "invalid credentials"
+                                                          : r.errmsg));
+                }
                 return;
             }
 
@@ -82,4 +88,32 @@ void AuthService::bind(const std::string& openidToken,
                                              {"role", b.role},
                                              {"name", b.name}}));
         });
+}
+
+void AuthService::devLogin(const std::string& username,
+                           const std::string& password, Callback cb) {
+    goBackend_->login(username, password, [this, cb](const GoBackendLogin& r) {
+        if (!r.ok) {
+            if (r.transport_error) {
+                cb(AuthResult::errorWithCode(drogon::k503ServiceUnavailable,
+                                             "GO_BACKEND_UNAVAILABLE",
+                                             "go-backend unreachable"));
+            } else {
+                cb(AuthResult::error(drogon::k401Unauthorized,
+                                     r.errmsg.empty() ? "invalid credentials"
+                                                      : r.errmsg));
+            }
+            return;
+        }
+        std::string role = r.role.empty() ? "teacher" : r.role;
+        if (role != "teacher" && role != "admin") {
+            role = "teacher";
+        }
+        const std::string token =
+            JwtUtil::signAccessToken(r.user_id, role, accessTtlSeconds_);
+        cb(AuthResult::ok(nlohmann::json{{"token", token},
+                                         {"user_id", r.user_id},
+                                         {"role", role},
+                                         {"name", r.name}}));
+    });
 }

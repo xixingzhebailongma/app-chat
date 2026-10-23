@@ -65,6 +65,12 @@
           <view class="d-title">
             <text class="d-label">{{ d.label }}</text>
             <StatusTag :text="d.status === 'online' ? '在线' : '离线'" :tone="d.status === 'online' ? 'success' : 'danger'" />
+            <StatusTag
+              v-if="d.zb_type !== 'sensor'"
+              style="margin-left: 12rpx"
+              :text="d.app === 'off' ? '已关闭' : '已开启'"
+              :tone="d.app === 'off' ? 'neutral' : 'info'"
+            />
           </view>
           <text class="d-sub">{{ deviceType(d.device_type, d.zb_type) }} · {{ d.device_id }}</text>
         </view>

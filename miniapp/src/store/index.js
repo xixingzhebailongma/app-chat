@@ -11,6 +11,8 @@ export const store = reactive({
   name: session.name || '',
   unhandledAlerts: 0,
   pendingAlertId: '', // 订阅消息深链待跳转的 alert_id（登录后消费）
+  aiDraft: '',
+  aiMessages: [],
 })
 
 export function isLoggedIn() {
@@ -38,4 +40,6 @@ export function logout() {
   store.name = ''
   store.unhandledAlerts = 0
   store.pendingAlertId = ''
+  store.aiDraft = ''
+  store.aiMessages = []
 }

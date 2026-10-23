@@ -29,7 +29,8 @@ std::string GoBackendClient::getUserPhoneSync(const std::string& user_id) {
         req->addHeader(cfg.userPhoneHeader, internalToken_);
     }
 
-    const auto [result, resp] = client->sendRequest(req);
+    const auto [result, resp] =
+        client->sendRequest(req, cfg.requestTimeoutMs / 1000.0);
     if (result != drogon::ReqResult::Ok || !resp ||
         resp->getStatusCode() != drogon::k200OK) {
         return "";
@@ -62,6 +63,7 @@ void GoBackendClient::login(const std::string& username,
             GoBackendLogin r;
             if (result != drogon::ReqResult::Ok || !resp) {
                 r.ok = false;
+                r.transport_error = true;
                 r.errmsg = "go-backend unreachable";
                 cb(r);
                 return;
@@ -121,7 +123,8 @@ void GoBackendClient::login(const std::string& username,
                 r.role = "teacher";
             }
             cb(r);
-        });
+        },
+        cfg.requestTimeoutMs / 1000.0);
 }
 
 void GoBackendClient::get(const std::string& path, const std::string& query,
@@ -140,6 +143,7 @@ void GoBackendClient::request(drogon::HttpMethod method,
                               const std::string& body,
                               const Headers& headers,
                               RawCallback cb) {
+    const UpstreamConfig cfg = UpstreamConfig::instance();
     auto client = drogon::HttpClient::newHttpClient(baseUrl_);
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(method);
@@ -175,5 +179,6 @@ void GoBackendClient::request(drogon::HttpMethod method,
             r.body = std::string(resp->getBody());
             r.contentType = resp->getContentType();
             cb(r);
-        });
+        },
+        cfg.requestTimeoutMs / 1000.0);
 }

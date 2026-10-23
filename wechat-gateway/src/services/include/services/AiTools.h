@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "db/SpaceRepository.h"
+#include "db/SpaceTypeRepository.h"
 #include "db/UserSpacesRepository.h"
 
 class DeviceService;
@@ -14,6 +15,7 @@ class DeviceControlService;
 class SceneService;
 class AlertService;
 class AccessRecordService;
+class SpaceBindingService;
 
 // AI 工具注册表与处理器：把 LLM 的 tool_calls 映射到现有网关服务。
 // 这是大模型唯一的数据/控制通道——没有 SQL、没有直连 go-backend 的旁路。
@@ -34,6 +36,8 @@ public:
             std::shared_ptr<AccessRecordService> accessRecordService,
             std::shared_ptr<SpaceRepository> spaceRepo,
             std::shared_ptr<UserSpacesRepository> userSpaces,
+            std::shared_ptr<SpaceTypeRepository> spaceTypes,
+            std::shared_ptr<SpaceBindingService> spaceBinding,
             bool enableDeviceControl);
 
     // 给 LLM 的 tools 数组（OpenAI function-calling 契约）。
@@ -57,5 +61,7 @@ private:
     std::shared_ptr<AccessRecordService> accessRecordService_;
     std::shared_ptr<SpaceRepository> spaceRepo_;
     std::shared_ptr<UserSpacesRepository> userSpaces_;
+    std::shared_ptr<SpaceTypeRepository> spaceTypes_;
+    std::shared_ptr<SpaceBindingService> spaceBinding_;
     bool enableDeviceControl_ = false;  // 单设备控制开关（首期默认关，见 config.json llm.enable_device_control）
 };

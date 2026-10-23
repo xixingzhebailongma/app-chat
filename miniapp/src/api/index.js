@@ -26,6 +26,15 @@ export const api = {
     })
   },
 
+  // 开发登录后门（仅本地联调，DEV_LOGIN=true 时用）：用户名密码直接换 JWT，绕过微信。
+  devLogin(username, password) {
+    return request({
+      url: base() + '/api/miniapp/dev-login',
+      method: 'POST',
+      data: { username, password },
+    })
+  },
+
   me() {
     return useMock() ? mockApi.me() : request({ url: base() + '/api/miniapp/me' })
   },
@@ -298,5 +307,17 @@ export const api = {
           url: base() + '/api/admin/spaces/' + encodeURIComponent(spaceId),
           method: 'DELETE',
         })
+  },
+
+  // AI 助手：自然语言对话（网关 /api/ai/chat）。messages 为完整历史
+  // [{role:'user'|'assistant', content}]；模型无状态，历史由前端维护。
+  // 单次可能多轮工具调用 + LLM 推理，超时放宽到 60s（无 mock，需真实网关）。
+  aiChat(messages) {
+    return request({
+      url: base() + '/api/ai/chat',
+      method: 'POST',
+      data: { messages },
+      timeout: 60000,
+    })
   },
 }

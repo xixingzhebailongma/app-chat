@@ -21,7 +21,7 @@ function extractCode(data) {
 // 登录/绑定是「换 token」的前置接口：不携带 access token，其 401 表示
 // 登录失败（code 无效 / 密码错）而非会话过期，须排除在 401 拦截之外。
 function isAuthEndpoint(url) {
-  return /\/api\/miniapp\/(login|bind)\/?$/.test(url)
+  return /\/api\/miniapp\/(login|bind|dev-login)\/?$/.test(url)
 }
 
 // 401 防抖标记：同一会话里多个并发请求同时 401，只清会话 + 跳登录一次。

@@ -3,6 +3,8 @@
 #include <sstream>
 #include <utility>
 
+#include <trantor/utils/Logger.h>
+
 #include "services/AiTools.h"
 
 namespace {
@@ -42,6 +44,21 @@ std::string AiService::buildSystemPrompt(const std::string& role,
     os << "2. 涉及具体教室时，先调用 list_spaces 解析出 space_id，再调用对应工具。\n";
     os << "3. 工具调用可能因权限不足或安全策略被拒绝（例如门禁开门需二次确认）；如果工具返回被拒绝，请把原因如实转达给用户，不要谎称已执行。\n";
     os << "4. 用简洁中文回答，必要时列点。\n";
+    os << "5. 「空间类型」是字典（可用 list_space_types 查询 code+中文名），与实际存在的教室（list_spaces）是两回事；某类型还没有对应教室不代表用户没有权限。\n";
+    os << "6. 单设备开关用 control_device（仅管理员可用）；门禁开门需到小程序二次确认，收到 428/400 时如实说明。control_device 返回成功（ok/200）只表示「命令已下发、被接收」，不等于设备已实际执行——请用「已下发关闭指令」这类措辞，不要断言「已成功关闭/打开」。\n";
+    os << "7. 「把所有设备关了/开了」没有一键工具。正确做法：先 list_scenes(space_id) "
+          "找到内置「离开模式」（关灯+关屏+关班牌）或「开启模式」（开灯+唤醒综合屏+开班牌）"
+          "并 execute_scene；执行后如实说明门禁不在场景范围内、需用户到小程序单独操作。"
+          "仅在用户明确要逐台操作时，才 query_devices 后逐个 control_device（仅管理员可用）。\n";
+    os << "8. 只有在你本轮真正调用了工具并读到工具返回后，才能描述执行结果；整轮没有调用"
+          "任何工具时，禁止声称「已下发/已关闭/已打开，包括…」或编造设备清单。"
+          "做不到（门禁需二次确认、无权限、无对应工具）就说明原因，绝不编结果。\n";
+    os << "9. 绑定/解绑教师-教室（bind_space/unbind_space）仅管理员可用且是敏感操作："
+          "先 list_spaces 把教室名解析成 space_id、确认目标 user_id 是教师，并在真正执行前"
+          "向用户说明并征得明确同意；未征得同意不得自行传 confirmed=true。首次调用"
+          "（不带 confirmed）返回需二次确认时，如实转达给用户，不要自行补 confirmed。\n";
+    os << "10. 用户用姓名（如「李老师」）提到教师时，先用 list_teachers 把姓名解析成 user_id，"
+          "再调用 bind_space/unbind_space；不要把姓名直接当 user_id 传。\n";
     return os.str();
 }
 
@@ -71,10 +88,17 @@ nlohmann::json AiService::chat(const std::string& userId,
 
     for (int i = 0; i < maxToolIters_; ++i) {
         const auto r = llm_->chat(messages, tools, maxTokens_, enableThinking_);
+        LOG_INFO << "[ai] user=" << userId << " role=" << role << " iter=" << i
+                 << " finish=" << r.finishReason
+                 << " n_tool_calls=" << r.toolCalls.size();
         if (!r.ok) {
             return nlohmann::json{{"error", r.error.empty() ? "llm error" : r.error}};
         }
         if (r.finishReason == "stop") {
+            if (usedTools.empty()) {
+                LOG_WARN << "[ai] user=" << userId
+                         << " answered without any tool call (possible fabrication)";
+            }
             return nlohmann::json{{"reply", r.content}, {"tool_calls", usedTools}};
         }
         if (r.finishReason == "tool_calls" && !r.toolCalls.empty()) {
@@ -90,6 +114,7 @@ nlohmann::json AiService::chat(const std::string& userId,
             messages.push_back(assistantMsg);
 
             for (const auto& tc : r.toolCalls) {
+                LOG_INFO << "[ai] tool=" << tc.name << " args=" << tc.arguments;
                 auto args = nlohmann::json::parse(tc.arguments, nullptr, false);
                 if (args.is_discarded()) {
                     args = nlohmann::json::object();
@@ -99,6 +124,8 @@ nlohmann::json AiService::chat(const std::string& userId,
                 if (content.size() > kMaxToolResultChars) {
                     content = content.substr(0, kMaxToolResultChars) + "…(截断)";
                 }
+                LOG_INFO << "[ai] tool_result=" << tc.name
+                         << " bytes=" << content.size();
                 messages.push_back({{"role", "tool"},
                                     {"tool_call_id", tc.id},
                                     {"content", content}});

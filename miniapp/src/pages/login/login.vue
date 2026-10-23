@@ -66,6 +66,8 @@ export default {
         let session
         if (this.isMock) {
           session = await api.loginMock(this.username, this.password)
+        } else if (config.DEV_LOGIN) {
+          session = await api.devLogin(this.username, this.password)
         } else {
           const code = await this.getWxCode()
           const r = await api.wxLogin(code)

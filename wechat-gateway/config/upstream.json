@@ -33,5 +33,6 @@
       "label": "label"
     }
   },
-  "ws_path": "/ws"
+  "ws_path": "/ws",
+  "timeout_ms": 10000
 }

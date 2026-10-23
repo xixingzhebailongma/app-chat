@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 助手调试页</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; color: #1a1a1a; }
+  h1 { font-size: 20px; margin-bottom: 2px; }
+  h3 { font-size: 14px; margin: 14px 0 6px; color: #444; }
+  .hint { color: #888; font-size: 13px; }
+  .panel { border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; margin: 10px 0; background: #fff; }
+  label { display: block; margin: 6px 0 2px; font-size: 13px; color: #555; }
+  input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid #c8d6f0; background: #f0f5ff; color: #1a3a6b; border-radius: 14px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+  .chip:hover { background: #dbe7ff; }
+  .space { border: 1px solid #d8e6d0; background: #f2f9ef; color: #2c5b2c; border-radius: 14px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+  #log { border: 1px solid #ccc; border-radius: 8px; height: 46vh; overflow-y: auto; padding: 12px; margin: 12px 0; background: #fafafa; }
+  .msg { margin: 8px 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+  .user { color: #0b57d0; }
+  .ai { color: #1a1a1a; }
+  .sys { color: #999; font-style: italic; }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  button { padding: 8px 14px; cursor: pointer; }
+  .sec { font-size: 13px; color: #555; }
+</style>
+</head>
+<body>
+  <h1>AI 助手调试页 <span class="hint">（仅调试，非交付物）</span></h1>
+  <p class="hint">连的是网关 + 本地 Qwen + 教室数据（设备/告警/进出/空间/场景）。</p>
+
+  <label>网关地址（留空 = 同源代理）</label>
+  <input id="base" type="text" value="" placeholder="留空走 serve.py 代理；或填 http://127.0.0.1:8080 直连">
+
+  <label>JWT（Authorization: Bearer）</label>
+  <input id="jwt" type="text" placeholder="粘贴 access token">
+
+  <div class="panel">
+    <h3>这个 AI 能做什么（当前能力）</h3>
+    <div class="sec">
+      ✅ 只读查询：<b>设备状态</b> / <b>告警</b> / <b>进出记录</b> / <b>教室空间</b> / <b>场景列表</b> / <b>告警统计</b><br>
+      ✅ 执行：<b>执行场景</b>（开启模式 / 离开模式 / 自定义场景）<br>
+      ❌ 暂不开放：单设备开关、门禁控制（默认关闭，属高风险，请到小程序手动操作）
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>示例问题（点一下填入输入框）</h3>
+    <div class="chips" id="examples"></div>
+  </div>
+
+  <div class="panel">
+    <h3>我可访问的教室（点一下问它的设备）&nbsp;<button id="loadSpaces">刷新空间</button></h3>
+    <div class="chips" id="spaces"><span class="sys">粘贴 JWT 后点「刷新空间」</span></div>
+  </div>
+
+  <div id="log"></div>
+
+  <div class="row">
+    <input id="input" type="text" placeholder="输入消息，回车发送" autocomplete="off">
+    <button id="send">发送</button>
+    <button id="clear">清空</button>
+  </div>
+
+<script>
+(function () {
+  var baseEl = document.getElementById('base');
+  var jwtEl = document.getElementById('jwt');
+  var logEl = document.getElementById('log');
+  var inputEl = document.getElementById('input');
+  var examplesEl = document.getElementById('examples');
+  var spacesEl = document.getElementById('spaces');
+
+  var messages = [];
+
+  // 网关地址：留空 = 同源代理（serve.py），填了 = 直连。
+  function apiUrl(path) {
+    var base = baseEl.value.trim().replace(/\/+$/, '');
+    return base ? (base + path) : path;
+  }
+  function jwt() { return jwtEl.value.trim(); }
+
+  function addMsg(role, text) {
+    var div = document.createElement('div');
+    div.className = 'msg ' + role;
+    var prefix = role === 'user' ? '我：' : (role === 'ai' ? 'AI：' : '');
+    div.textContent = prefix + text;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // 示例问题
+  var examples = [
+    '列出我能访问的教室',
+    'A101 有哪些设备在线？',
+    'A101 有哪些场景？',
+    '最近有什么告警？',
+    '今天的进出记录',
+    '告警统计概览',
+    '执行 A101 的开启模式'
+  ];
+  examples.forEach(function (q) {
+    var b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = q;
+    b.addEventListener('click', function () { inputEl.value = q; inputEl.focus(); });
+    examplesEl.appendChild(b);
+  });
+
+  // 可访问空间（走网关 GET /api/miniapp/spaces）
+  function loadSpaces() {
+    if (!jwt()) { spacesEl.innerHTML = '<span class="sys">请先粘贴 JWT</span>'; return; }
+    fetch(apiUrl('/api/miniapp/spaces'), {
+      headers: { 'Authorization': 'Bearer ' + jwt() }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      spacesEl.innerHTML = '';
+      var list = d.spaces || [];
+      if (!list.length) { spacesEl.innerHTML = '<span class="sys">无可访问空间</span>'; return; }
+      list.forEach(function (s) {
+        var b = document.createElement('button');
+        b.className = 'space';
+        b.textContent = s.name + ' (' + s.space_id + ')';
+        b.title = '问这个教室的设备';
+        b.addEventListener('click', function () {
+          inputEl.value = s.name + ' 有哪些设备在线？';
+          inputEl.focus();
+        });
+        spacesEl.appendChild(b);
+      });
+    })
+    .catch(function (e) {
+      spacesEl.innerHTML = '<span class="sys">加载失败：' + e.message + '</span>';
+    });
+  }
+
+  function send() {
+    var text = inputEl.value.trim();
+    if (!text) return;
+    if (!jwt()) { addMsg('sys', '请先粘贴 JWT'); return; }
+
+    addMsg('user', text);
+    inputEl.value = '';
+    messages.push({ role: 'user', content: text });
+
+    fetch(apiUrl('/api/ai/chat'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt() },
+      body: JSON.stringify({ messages: messages })
+    })
+    .then(function (resp) {
+      return resp.json().catch(function () { return {}; }).then(function (data) {
+        return { status: resp.status, ok: resp.ok, data: data };
+      });
+    })
+    .then(function (r) {
+      if (!r.ok) { addMsg('ai', '错误(' + r.status + ')：' + JSON.stringify(r.data)); return; }
+      var reply = r.data.reply || '(空回复)';
+      addMsg('ai', reply);
+      messages.push({ role: 'assistant', content: reply });
+    })
+    .catch(function (e) { addMsg('ai', '请求失败：' + e.message); });
+  }
+
+  document.getElementById('send').addEventListener('click', send);
+  inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
+  document.getElementById('clear').addEventListener('click', function () {
+    messages = [];
+    logEl.innerHTML = '';
+    addMsg('sys', '会话已清空');
+  });
+  document.getElementById('loadSpaces').addEventListener('click', loadSpaces);
+
+  addMsg('sys', '调试页就绪。粘贴 JWT → 点「刷新空间」→ 点示例问题或直接输入。');
+})();
+</script>
+</body>
+</html>

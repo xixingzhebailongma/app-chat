@@ -41,6 +41,10 @@ struct UpstreamConfig {
 
     std::string wsPath = "/ws";
 
+    // 边侧转发超时，单位毫秒（0 = 禁用）。注意：drogon HttpClient::sendRequest
+    // 的 timeout 单位是「秒」，调用处需 / 1000.0 换算。
+    double requestTimeoutMs = 10000;
+
     static UpstreamConfig& instance() {
         static UpstreamConfig c;
         return c;
@@ -97,6 +101,7 @@ struct UpstreamConfig {
             }
         }
         wsPath = j.value("ws_path", wsPath);
+        requestTimeoutMs = j.value("timeout_ms", requestTimeoutMs);
     }
 
     // 路径模板替换：把 {key} 换成 vars[key]。
@@ -126,6 +131,7 @@ struct UpstreamResponse {
 // go-backend 的 POST /api/auth/login 的结果。
 struct UpstreamLogin {
     bool ok = false;
+    bool transport_error = false;  // 上游不可达/超时，与「凭证错误」区分
     std::string user_id;
     std::string username;
     std::string role;

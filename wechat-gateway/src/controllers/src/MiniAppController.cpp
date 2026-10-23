@@ -61,6 +61,29 @@ void MiniAppController::bind(const drogon::HttpRequestPtr& req,
                    });
 }
 
+void MiniAppController::devLogin(const drogon::HttpRequestPtr& req,
+                                 Callback&& callback) {
+    nlohmann::json body;
+    try {
+        body = nlohmann::json::parse(req->getBody());
+    } catch (const std::exception&) {
+        callback(http_util::error(drogon::k400BadRequest, "invalid JSON body"));
+        return;
+    }
+    if (!body.is_object() || !body.contains("username") ||
+        !body["username"].is_string() || !body.contains("password") ||
+        !body["password"].is_string()) {
+        callback(http_util::error(drogon::k400BadRequest,
+                                  "username and password must be strings"));
+        return;
+    }
+    service_->devLogin(body["username"].get<std::string>(),
+                       body["password"].get<std::string>(),
+                       [callback = std::move(callback)](const AuthResult& r) {
+                           callback(http_util::jsonResponse(r.status, r.body));
+                       });
+}
+
 void MiniAppController::me(const drogon::HttpRequestPtr& req,
                            Callback&& callback) {
     const auto id = request_util::identity(req);

@@ -312,6 +312,7 @@ add_executable(ai_service_test
     src/services/src/SceneService.cpp
     src/services/src/AlertService.cpp
     src/services/src/AccessRecordService.cpp
+    src/services/src/SpaceBindingService.cpp
     src/services/src/DeviceService.cpp
     src/services/src/DeviceControlService.cpp
     src/clients/src/GoBackendClient.cpp

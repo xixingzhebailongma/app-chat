@@ -365,6 +365,32 @@ int main() {
 
     app().addListener("0.0.0.0", port);
 
+    // CORS（调试工具 tools/ai-debug/index.html 用，非交付物）：允许任意 Origin
+    // （含 file:// 的 "null" Origin），使单文件调试页可直接 POST /api/ai/chat。
+    // 仅解除浏览器的跨域读取限制，不改变鉴权（JWT / X-Internal-Token 仍照常校验）；
+    // 上线如需可改为 Origin 白名单或移除。
+    app().registerPreRoutingAdvice(
+        [](const HttpRequestPtr& req, AdviceCallback&& acb,
+           AdviceChainCallback&& accb) {
+            if (req->getMethod() == Options) {
+                auto resp = HttpResponse::newHttpResponse();
+                resp->setStatusCode(k204NoContent);
+                resp->addHeader("Access-Control-Allow-Origin", "*");
+                resp->addHeader("Access-Control-Allow-Methods",
+                                "POST, GET, OPTIONS");
+                resp->addHeader("Access-Control-Allow-Headers",
+                                "Content-Type, Authorization");
+                resp->addHeader("Access-Control-Max-Age", "600");
+                acb(resp);
+                return;
+            }
+            accb();
+        });
+    app().registerPreSendingAdvice(
+        [](const HttpRequestPtr&, const HttpResponsePtr& resp) {
+            resp->addHeader("Access-Control-Allow-Origin", "*");
+        });
+
     // 内部令牌鉴权过滤器——在 registerHandler 中按名称引用时由
     // Drogon 自动创建（HttpFilter<T> 的 isAutoCreation=true）。我们只需
     // 在首个请求前填充其静态令牌；无需手动 registerFilter。
@@ -813,7 +839,8 @@ int main() {
     auto subscriptionService = std::make_shared<SubscriptionService>(
         subscriptionRepo, miniappTemplateIdSet, miniappLongTermTemplateIds);
     auto spaceBindingService = std::make_shared<SpaceBindingService>(
-        userSpacesRepo, userRoleRepo, spaceRepo, wechatBindingRepo);
+        userSpacesRepo, userRoleRepo, spaceRepo, wechatBindingRepo,
+        operationLogRepo, operationLogFile);
     auto spaceSyncService = std::make_shared<SpaceSyncService>(
         spaceRepo, userSpacesRepo, doorDeviceRepo);
     auto studentParentSyncService =
@@ -831,7 +858,8 @@ int main() {
     // AI 助手（设计文档 7.10）：工具层复用现有服务，编排层驱动 Qwen 函数调用循环。
     auto aiTools = std::make_shared<AiTools>(
         deviceService, deviceControlService, sceneService, alertService,
-        accessRecordService, spaceRepo, userSpacesRepo, llmEnableDeviceControl);
+        accessRecordService, spaceRepo, userSpacesRepo, spaceTypeRepo,
+        spaceBindingService, llmEnableDeviceControl);
     auto aiService = std::make_shared<AiService>(
         qwenClient, aiTools, llmEnableThinking, llmMaxTokens, llmMaxToolIters);
 
@@ -1024,6 +1052,19 @@ int main() {
             miniAppCtrl->bind(req, std::move(cb));
         },
         {Post});
+
+    // 开发环境后门登录（仅非 prod）：用户名密码直接换 JWT，跳过微信
+    // jscode2session，供本地浏览器/H5 联调。生产绝不注册此路由。
+    if (appEnv != "prod" && appEnv != "production") {
+        app().registerHandler(
+            "/api/miniapp/dev-login",
+            [miniAppCtrl](const HttpRequestPtr& req,
+                          std::function<void(const HttpResponsePtr&)>&& cb) {
+                miniAppCtrl->devLogin(req, std::move(cb));
+            },
+            {Post});
+        LOG_WARN << "dev-login endpoint enabled (APP_ENV is not prod)";
+    }
 
     app().registerHandler(
         "/api/miniapp/me",

@@ -42,7 +42,8 @@ void SpaceBindingController::bind(
         return;
     }
 
-    const auto r = service_->bind(id.role, body["user_id"].get<std::string>(),
+    const auto r = service_->bind(id.role, id.user_id,
+                                  body["user_id"].get<std::string>(),
                                   body["space_id"].get<std::string>());
     callback(http_util::jsonResponse(r.status, r.body));
 }
@@ -59,6 +60,6 @@ void SpaceBindingController::unbind(
         return;
     }
 
-    const auto r = service_->unbind(id.role, userId, spaceId);
+    const auto r = service_->unbind(id.role, id.user_id, userId, spaceId);
     callback(http_util::jsonResponse(r.status, r.body));
 }

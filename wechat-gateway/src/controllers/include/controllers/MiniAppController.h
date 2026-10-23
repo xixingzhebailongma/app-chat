@@ -22,6 +22,10 @@ public:
     void login(const drogon::HttpRequestPtr& req, Callback&& callback);
     void bind(const drogon::HttpRequestPtr& req, Callback&& callback);
 
+    // POST /api/miniapp/dev-login —— 开发环境后门（仅非 prod 注册路由）：
+    // 用户名密码直接换 JWT，跳过微信 jscode2session。
+    void devLogin(const drogon::HttpRequestPtr& req, Callback&& callback);
+
     // GET /api/miniapp/me —— 由 JwtFilter 认证；返回从 bearer 令牌解码出的调用方
     // 身份（六 中的“后续请求”路径）。
     void me(const drogon::HttpRequestPtr& req, Callback&& callback);

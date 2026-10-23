@@ -58,6 +58,15 @@
       }
     },
     {
+      "path": "pages/ai/ai",
+      "style": {
+        "navigationBarTitleText": "AI 助手",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black",
+        "backgroundColor": "#f5f7fa"
+      }
+    },
+    {
       "path": "pages/profile/profile",
       "style": {
         "navigationBarTitleText": "我的",

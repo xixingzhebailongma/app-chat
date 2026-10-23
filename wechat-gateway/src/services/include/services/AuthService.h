@@ -33,6 +33,17 @@ struct AuthResult {
         r.body = http_util::errorBodyForStatus(static_cast<int>(s), msg);
         return r;
     }
+
+    // 带显式字符串码的错误（如 "GO_BACKEND_UNAVAILABLE"），避免 errorBodyForStatus
+    // 的反向码表对同一 HTTP 状态返回歧义码（503 对应多个码时按字母序取第一个）。
+    static AuthResult errorWithCode(drogon::HttpStatusCode s,
+                                    const std::string& code,
+                                    const std::string& msg) {
+        AuthResult r;
+        r.status = s;
+        r.body = http_util::errorBody(code, msg);
+        return r;
+    }
 };
 
 // 实现设计文档 六 中的小程序登录/绑定流程。
@@ -54,6 +65,11 @@ public:
     // 校验凭证，持久化绑定，签发 JWT。
     void bind(const std::string& openidToken, const std::string& username,
               const std::string& password, Callback cb);
+
+    // POST /api/miniapp/dev-login（仅开发环境注册路由）：用户名密码经 go-backend
+    // 校验后直接签发 JWT，跳过微信 jscode2session，供本地浏览器/H5 联调。
+    void devLogin(const std::string& username, const std::string& password,
+                  Callback cb);
 
 private:
     std::shared_ptr<WechatClient> wechat_;

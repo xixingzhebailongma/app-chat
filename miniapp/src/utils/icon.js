@@ -9,6 +9,7 @@ export const TAB_ICONS = {
   devices: 'gear', // 设备
   alerts: 'notification', // 告警
   profile: 'person', // 我的
+  ai: 'chatbubble', // AI 助手
 }
 
 // 设备类型 → 图标（综合屏 API 契约：device_type ∈ zigbee / fuhe-*，
