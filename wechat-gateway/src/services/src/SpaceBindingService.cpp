@@ -76,7 +76,13 @@ ServiceResult SpaceBindingService::bind(const std::string& role,
     entry.detail = nlohmann::json{{"teacher_user_id", teacherUserId}}.dump();
     oplog::writeOperationLog(opLogRepo_.get(), entry, opLogFile_);
 
-    return ServiceResult::ok(nlohmann::json{{"ok", true}});
+    nlohmann::json spaceIds = nlohmann::json::array();
+    for (const auto& sid : userSpaces_->spacesForUser(teacherUserId)) {
+        spaceIds.push_back(sid);
+    }
+    return ServiceResult::ok(nlohmann::json{
+        {"ok", true}, {"teacher_user_id", teacherUserId},
+        {"space_id", spaceId}, {"space_ids", spaceIds}});
 }
 
 ServiceResult SpaceBindingService::unbind(const std::string& role,
@@ -86,6 +92,14 @@ ServiceResult SpaceBindingService::unbind(const std::string& role,
     if (role != "admin") {
         return ServiceResult::error(drogon::k403Forbidden,
                                     "admin role required");
+    }
+    // 校验目标必须是真实教师：AI 把姓名解析错（如编出 teacher_001）时，这里显式
+    // 报错，让模型自纠，而不是静默 no-op 后仍返回 ok（幂等会掩盖错误 user_id）。
+    const auto teachers = userRoles_->usersByRole("teacher");
+    if (std::find(teachers.begin(), teachers.end(), teacherUserId) ==
+        teachers.end()) {
+        return ServiceResult::error(drogon::k400BadRequest,
+                                    "user is not a teacher");
     }
     userSpaces_->remove(teacherUserId, spaceId);
 
@@ -99,5 +113,11 @@ ServiceResult SpaceBindingService::unbind(const std::string& role,
     entry.detail = nlohmann::json{{"teacher_user_id", teacherUserId}}.dump();
     oplog::writeOperationLog(opLogRepo_.get(), entry, opLogFile_);
 
-    return ServiceResult::ok(nlohmann::json{{"ok", true}});
+    nlohmann::json spaceIds = nlohmann::json::array();
+    for (const auto& sid : userSpaces_->spacesForUser(teacherUserId)) {
+        spaceIds.push_back(sid);
+    }
+    return ServiceResult::ok(nlohmann::json{
+        {"ok", true}, {"teacher_user_id", teacherUserId},
+        {"space_id", spaceId}, {"space_ids", spaceIds}});
 }

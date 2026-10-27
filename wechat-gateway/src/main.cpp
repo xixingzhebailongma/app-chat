@@ -51,6 +51,7 @@
 #include "db/NotifyTargetResolver.h"
 #include "db/OaNotifyLogRepository.h"
 #include "db/OperationLogRepository.h"
+#include "db/OperationLogWriter.h"
 #include "db/ParentBindingRepository.h"
 #include "db/PendingEventRepository.h"
 #include "db/PgAccessRecordRepository.h"
@@ -81,10 +82,13 @@
 #include "db/UserRoleRepository.h"
 #include "db/UserSpacesRepository.h"
 #include "db/WechatBindingRepository.h"
+#include "db/AiConversationRepository.h"
+#include "db/PgAiConversationRepository.h"
 #include "filters/InternalTokenFilter.h"
 #include "filters/JwtFilter.h"
 #include "services/AccessRecordService.h"
 #include "services/AiService.h"
+#include "services/AiConversationService.h"
 #include "services/AiTools.h"
 #include "services/AlertService.h"
 #include "services/AuthService.h"
@@ -261,7 +265,8 @@ int main() {
     bool llmEnableThinking = cc["llm"].get("enable_thinking", false).asBool();
     int llmMaxTokens = cc["llm"].get("max_tokens", 2048).asInt();
     int llmMaxToolIters = cc["llm"].get("max_tool_iters", 5).asInt();
-    // 首期收口：单设备控制默认关；开启后 control_device 仍仅 admin 可用。
+    // 首期收口：单设备控制默认关；开启后 control_device 按角色+空间鉴权
+    // （admin 全量 / teacher 仅绑定空间，见 authz::canAccessSpace）。
     bool llmEnableDeviceControl =
         cc["llm"].get("enable_device_control", false).asBool();
     double llmTimeoutMs = cc["llm"].get("timeout_ms", 30000).asDouble();
@@ -430,6 +435,7 @@ int main() {
     // 渠道地址解析（读）+ admin 绑定写。两者共用同一底层实例（InMemory 或 Pg）。
     std::shared_ptr<INotifyTargetResolver> notifyTargetResolverBase;
     std::shared_ptr<NotifyBindingRepository> notifyBindingRepo;
+    std::shared_ptr<AiConversationRepository> aiConversationRepo;  // AI 会话记忆（7.x）
 
 #ifdef HAS_LIBPQ
     if (pgPool) {
@@ -457,6 +463,7 @@ int main() {
         userRoleRepo = std::make_shared<PgUserRoleRepository>(pgPool);
         accessRecordRepo = std::make_shared<PgAccessRecordRepository>(pgPool);
         operationLogRepo = std::make_shared<PgOperationLogRepository>(pgPool);
+        aiConversationRepo = std::make_shared<PgAiConversationRepository>(pgPool);
     } else
 #endif
     {
@@ -511,6 +518,36 @@ int main() {
             alertsMem->setName("u_admin_2", "管理员");
             alertsMem->setName("u_teacher_1", "李老师");
             alertsMem->setName("u_teacher_2", "王老师");
+            // 告警种子（对齐 sql/seed_dev.sql 落在上面 3 个内存空间上的 alt_1~alt_3；
+            // alt_4/alt_5 落在 office/gym 空间，内存模式未种这些空间，故不种）。
+            auto seedAlert = [](const std::string& id, const std::string& space,
+                                const std::string& type, const std::string& status,
+                                const std::string& deviceId,
+                                const std::string& deviceLabel,
+                                const std::string& opId = "",
+                                const std::string& opName = "",
+                                const std::string& remark = "") {
+                Alert a;
+                a.alert_id = id;
+                a.space_id = space;
+                a.event_type = type;
+                a.status = status;
+                a.operator_id = opId;
+                a.operator_name = opName;
+                a.remark = remark;
+                a.device_id = deviceId;
+                a.device_label = deviceLabel;
+                a.created_at = oplog::nowIsoUtc();
+                a.updated_at = a.created_at;
+                return a;
+            };
+            alertsMem->add(seedAlert("alt_1", "spc_a8acdd5c", "device_offline",
+                                     "unhandled", "dev_fuhe_a101", "A101 综合屏"));
+            alertsMem->add(seedAlert("alt_2", "spc_b7bee44d", "sensor_threshold",
+                                     "unhandled", "", ""));
+            alertsMem->add(seedAlert("alt_3", "spc_a8acdd5c", "face_login_failed",
+                                     "resolved", "dev_face_a101", "A101 人脸机",
+                                     "u_admin_1", "管理员", "已处理"));
             alertRepo = alertsMem;
         }
         doorDeviceRepo = std::make_shared<InMemoryDoorDeviceRepository>();
@@ -532,6 +569,7 @@ int main() {
         userSpacesRepo->add("u_teacher_1", "spc_a8acdd5c");
         userSpacesRepo->add("u_teacher_2", "spc_b7bee44d");
         accessRecordRepo = std::make_shared<InMemoryAccessRecordRepository>();
+        aiConversationRepo = std::make_shared<InMemoryAiConversationRepository>();
     }
 
     // 角色实时性（7.7 收尾项 d）：JwtFilter 验签后按 user_roles 覆盖 JWT
@@ -860,8 +898,11 @@ int main() {
         deviceService, deviceControlService, sceneService, alertService,
         accessRecordService, spaceRepo, userSpacesRepo, spaceTypeRepo,
         spaceBindingService, llmEnableDeviceControl);
+    auto aiConversationService =
+        std::make_shared<AiConversationService>(aiConversationRepo);
     auto aiService = std::make_shared<AiService>(
-        qwenClient, aiTools, llmEnableThinking, llmMaxTokens, llmMaxToolIters);
+        qwenClient, aiTools, llmEnableThinking, llmMaxTokens, llmMaxToolIters,
+        aiConversationService);
 
     // 控制器。
     auto notifyCtrl = std::make_shared<NotifyController>(notifyService);
@@ -894,7 +935,7 @@ int main() {
         std::make_shared<StudentParentSyncController>(studentParentSyncService);
     auto notifyBindingCtrl =
         std::make_shared<NotifyBindingController>(notifyBindingService);
-    auto aiCtrl = std::make_shared<AiController>(aiService);
+    auto aiCtrl = std::make_shared<AiController>(aiService, aiConversationService);
 
     // WebSocket 代理控制器依赖注入（边侧 /ws 转发，设计文档 7.4②）。
     // 控制器本身由 Drogon 按类名自动创建（WebSocketController 自动注册），
@@ -1369,6 +1410,30 @@ int main() {
             aiCtrl->chat(req, std::move(cb));
         },
         {Post, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/ai/conversations",
+        [aiCtrl](const HttpRequestPtr& req,
+                 std::function<void(const HttpResponsePtr&)>&& cb) {
+            aiCtrl->listConversations(req, std::move(cb));
+        },
+        {Get, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/ai/conversations/{conversation_id}/messages",
+        [aiCtrl](const HttpRequestPtr& req,
+                 std::function<void(const HttpResponsePtr&)>&& cb) {
+            aiCtrl->listMessages(req, std::move(cb));
+        },
+        {Get, std::string("JwtFilter")});
+
+    app().registerHandler(
+        "/api/ai/conversations/{conversation_id}",
+        [aiCtrl](const HttpRequestPtr& req,
+                 std::function<void(const HttpResponsePtr&)>&& cb) {
+            aiCtrl->remove(req, std::move(cb));
+        },
+        {Delete, std::string("JwtFilter")});
 
     LOG_INFO << "wechat-gateway listening on 0.0.0.0:" << port;
     app().run();

@@ -42,7 +42,7 @@
     <div class="sec">
       ✅ 只读查询：<b>设备状态</b> / <b>告警</b> / <b>进出记录</b> / <b>教室空间</b> / <b>场景列表</b> / <b>告警统计</b><br>
       ✅ 执行：<b>执行场景</b>（开启模式 / 离开模式 / 自定义场景）<br>
-      ❌ 暂不开放：单设备开关、门禁控制（默认关闭，属高风险，请到小程序手动操作）
+      ✅ 执行：<b>单设备开关</b>（管理员全量 / 教师仅本人绑定教室；门禁仍需到小程序二次确认）
     </div>
   </div>
 
@@ -74,6 +74,7 @@
   var spacesEl = document.getElementById('spaces');
 
   var messages = [];
+  var conversationId = '';
 
   // 网关地址：留空 = 同源代理（serve.py），填了 = 直连。
   function apiUrl(path) {
@@ -146,10 +147,14 @@
     inputEl.value = '';
     messages.push({ role: 'user', content: text });
 
+    // 只发本轮新消息 + 会话 id；历史由服务端记忆。
+    var body = { messages: [{ role: 'user', content: text }] };
+    if (conversationId) body.conversation_id = conversationId;
+
     fetch(apiUrl('/api/ai/chat'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt() },
-      body: JSON.stringify({ messages: messages })
+      body: JSON.stringify(body)
     })
     .then(function (resp) {
       return resp.json().catch(function () { return {}; }).then(function (data) {
@@ -158,6 +163,7 @@
     })
     .then(function (r) {
       if (!r.ok) { addMsg('ai', '错误(' + r.status + ')：' + JSON.stringify(r.data)); return; }
+      if (r.data.conversation_id) conversationId = r.data.conversation_id;
       var reply = r.data.reply || '(空回复)';
       addMsg('ai', reply);
       messages.push({ role: 'assistant', content: reply });
@@ -169,8 +175,9 @@
   inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
   document.getElementById('clear').addEventListener('click', function () {
     messages = [];
+    conversationId = '';
     logEl.innerHTML = '';
-    addMsg('sys', '会话已清空');
+    addMsg('sys', '新会话');
   });
   document.getElementById('loadSpaces').addEventListener('click', loadSpaces);
 

@@ -1,5 +1,11 @@
 <template>
   <view class="ai">
+    <!-- 顶栏：标题 + 新对话（有消息时显示） -->
+    <view class="ai-header">
+      <text class="ai-header-t">AI 助手</text>
+      <view v-if="messages.length" class="new-chat" @tap="newChat">＋ 新对话</view>
+    </view>
+
     <!-- 空态：欢迎 + 能力说明 + 快捷问题（有消息后隐藏，给对话让位） -->
     <view v-if="!messages.length" class="welcome">
       <view class="welcome-logo">AI</view>
@@ -54,7 +60,7 @@
 
 <script>
 import { api } from '../../api/index'
-import { store, isLoggedIn } from '../../store/index'
+import { store, isLoggedIn, saveAiConversationId } from '../../store/index'
 import AppTabBar from '../../components/AppTabBar.vue'
 
 export default {
@@ -86,12 +92,44 @@ export default {
   onShow() {
     if (!isLoggedIn()) {
       uni.reLaunch({ url: '/pages/login/login' })
+      return
     }
+    this.restoreHistory()
   },
   methods: {
     quickAsk(q) {
       this.draft = q
       this.send()
+    },
+    newChat() {
+      saveAiConversationId('')
+      store.aiMessages = []
+    },
+    async restoreHistory() {
+      if (store.aiMessages.length) return // 已有消息不重复拉取
+      // 已有会话 id：拉历史回填（跨刷新）。
+      if (store.aiConversationId) {
+        try {
+          const res = await api.aiMessages(store.aiConversationId)
+          const msgs = (res && res.messages) || []
+          store.aiMessages = msgs
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .map((m) => ({ role: m.role, content: m.content }))
+        } catch (e) {
+          saveAiConversationId('')
+          store.aiMessages = []
+        }
+        return
+      }
+      // 无会话 id：续最近一个会话（跨设备续聊）。
+      try {
+        const res = await api.aiConversations()
+        const list = (res && res.conversations) || []
+        if (list.length) {
+          saveAiConversationId(list[0].conversation_id)
+          await this.restoreHistory()
+        }
+      } catch (e) {}
     },
     pushMessage(m) {
       const MAX = 50
@@ -113,21 +151,31 @@ export default {
       this.loading = true
       this.scrollToBottom()
 
-      // 只把 user/assistant 文本作为历史发给后端（模型无状态）。
-      const payload = this.messages
-        .filter((m) => m.role === 'user' || m.role === 'assistant')
-        .map((m) => ({ role: m.role, content: m.content }))
-
       try {
-        const res = await api.aiChat(payload)
-        const reply = (res && res.reply) || '(空回复)'
-        this.pushMessage({ role: 'assistant', content: reply })
+        await this.ask(text, store.aiConversationId)
       } catch (e) {
-        this.pushMessage({ role: 'assistant', content: '请求失败：' + (e.message || '未知错误') })
+        // 会话失效（如网关重启、内存模式历史清空）：清掉旧 id，新会话重试一次。
+        if (e.status === 404) {
+          saveAiConversationId('')
+          try {
+            await this.ask(text, '')
+          } catch (e2) {
+            this.pushMessage({ role: 'assistant', content: '请求失败：' + (e2.message || '未知错误') })
+          }
+        } else {
+          this.pushMessage({ role: 'assistant', content: '请求失败：' + (e.message || '未知错误') })
+        }
       } finally {
         this.loading = false
         this.scrollToBottom()
       }
+    },
+    async ask(text, conversationId) {
+      // 只发本轮新消息 + 会话 id；历史由服务端记忆。
+      const res = await api.aiChat([{ role: 'user', content: text }], conversationId)
+      if (res && res.conversation_id) saveAiConversationId(res.conversation_id)
+      const reply = (res && res.reply) || '(空回复)'
+      this.pushMessage({ role: 'assistant', content: reply })
     },
   },
 }
@@ -140,6 +188,31 @@ export default {
   flex-direction: column;
   box-sizing: border-box;
   padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
+}
+
+/* 顶栏 */
+.ai-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx 8rpx;
+}
+.ai-header-t {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.new-chat {
+  font-size: 24rpx;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border: 1rpx solid var(--primary-border);
+  border-radius: 30rpx;
+  padding: 6rpx 20rpx;
+}
+.new-chat:active {
+  background: rgba(91, 141, 239, 0.18);
 }
 
 /* 空态欢迎区 */

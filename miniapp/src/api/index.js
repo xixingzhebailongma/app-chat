@@ -309,15 +309,38 @@ export const api = {
         })
   },
 
-  // AI 助手：自然语言对话（网关 /api/ai/chat）。messages 为完整历史
-  // [{role:'user'|'assistant', content}]；模型无状态，历史由前端维护。
+  // AI 助手：自然语言对话（网关 /api/ai/chat）。conversationId 为空 => 新建会话；
+  // 非空 => 沿用。messages 为本轮新增消息（通常 1 条 user），历史由服务端记忆。
   // 单次可能多轮工具调用 + LLM 推理，超时放宽到 60s（无 mock，需真实网关）。
-  aiChat(messages) {
+  aiChat(messages, conversationId) {
+    const data = { messages }
+    if (conversationId) data.conversation_id = conversationId
     return request({
       url: base() + '/api/ai/chat',
       method: 'POST',
-      data: { messages },
+      data,
       timeout: 60000,
+    })
+  },
+  aiConversations() {
+    return request({ url: base() + '/api/ai/conversations' })
+  },
+  aiMessages(conversationId) {
+    return request({
+      url:
+        base() +
+        '/api/ai/conversations/' +
+        encodeURIComponent(conversationId) +
+        '/messages',
+    })
+  },
+  aiDeleteConversation(conversationId) {
+    return request({
+      url:
+        base() +
+        '/api/ai/conversations/' +
+        encodeURIComponent(conversationId),
+      method: 'DELETE',
     })
   },
 }

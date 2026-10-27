@@ -20,6 +20,7 @@
 // scene 执行单台设备的下发结果。
 struct SceneDeviceResult {
     std::string device_id;
+    std::string label;  // 设备 label，供 AI/前端如实报告「哪台被下发/哪台未匹配」
     std::string command;
     int status = 0;  // go-backend 透传的 HTTP 状态；传输失败记 0
 };
@@ -29,6 +30,7 @@ struct SceneTarget {
     std::string type;
     std::string id;
     std::string command;
+    std::string label;  // custom 场景无 label（空串）；内置场景从设备列表带入
 };
 
 // 返回给控制器的结果，用于场景执行。
@@ -59,6 +61,7 @@ struct SceneResult {
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& d : results) {
             arr.push_back({{"device_id", d.device_id},
+                           {"label", d.label},
                            {"command", d.command},
                            {"status", d.status}});
         }

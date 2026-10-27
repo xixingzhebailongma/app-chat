@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -22,11 +23,16 @@ class SpaceBindingService;
 // 鉴权由各服务内部已实现的 authz::canAccessSpace 完成，本层不重复放行。
 class AiTools {
 public:
-    // 一次对话中贯穿所有工具调用的身份上下文。
+    // 一次对话中贯穿所有工具调用的身份上下文。resolvedTeacherIds /
+    // resolvedSpaceIds 由 list_teachers / list_spaces 填充，作为 bind_space /
+    // unbind_space 的硬约束：user_id / space_id 必须来自这两次解析，禁止猜测。
     struct Context {
         std::string userId;
         std::string role;
         std::string jwt;
+        std::set<std::string> resolvedTeacherIds;
+        std::set<std::string> resolvedSpaceIds;
+        std::set<std::string> resolvedAlertIds;  // query_alerts 解析出的 alert_id（handle_alert 硬约束）
     };
 
     AiTools(std::shared_ptr<DeviceService> deviceService,
@@ -46,7 +52,7 @@ public:
     // 执行一次工具调用；返回作为 tool 消息 content 的 JSON 值。
     // 未知工具/非法参数返回 {"error": "..."}，让模型自纠。
     nlohmann::json invoke(const std::string& name, const nlohmann::json& args,
-                          const Context& ctx) const;
+                          Context& ctx) const;
 
     // 用户可访问的空间清单，供 AiService 注入 system prompt。
     // 规则与 SpaceService::list 一致：admin 全部启用空间 / teacher 仅绑定空间。

@@ -36,6 +36,7 @@ if (PostgreSQL_FOUND)
         src/db/src/PgSpaceRepository.cpp
         src/db/src/PgSpaceTypeRepository.cpp
         src/db/src/PgSceneRepository.cpp
+        src/db/src/PgAiConversationRepository.cpp
         src/db/src/PgAlertRepository.cpp
         src/db/src/PgDoorDeviceRepository.cpp
         src/db/src/PgNotifyLogRepository.cpp
@@ -102,6 +103,7 @@ add_executable(wechat-gateway
     src/services/src/DeviceService.cpp
     src/services/src/AccessRecordService.cpp
     src/services/src/AiService.cpp
+    src/services/src/AiConversationService.cpp
     src/services/src/AiTools.cpp
     src/services/src/SpaceBindingService.cpp
     src/services/src/NotifyBindingService.cpp
@@ -308,6 +310,7 @@ add_test(NAME alert_service_test COMMAND alert_service_test)
 add_executable(ai_service_test
     tests/test_ai_service.cpp
     src/services/src/AiService.cpp
+    src/services/src/AiConversationService.cpp
     src/services/src/AiTools.cpp
     src/services/src/SceneService.cpp
     src/services/src/AlertService.cpp

@@ -234,9 +234,23 @@ void SceneService::execute(const std::string& userId, const std::string& role,
                     if (matchesSceneRule(rule, dev)) {
                         targets.push_back(
                             {dev.value(UpstreamConfig::instance().devTypeKey, ""),
-                             deviceId, rule.command});
+                             deviceId, rule.command,
+                             dev.value(UpstreamConfig::instance().devLabelKey, "")});
                         break;
                     }
+                }
+            }
+            if (targets.empty()) {
+                // 诊断：灯不亮/场景无反应的常见根因是设备 device_type/label 未命中规则。
+                // 把实际拿到的每台设备的 device_type + label 记下来，便于对照 go-backend 返回。
+                LOG_WARN << "[scene] no device matched kind=" << scene.kind
+                         << " space=" << scene.space_id
+                         << " devices=" << parsed.size();
+                for (const auto& dev : parsed) {
+                    LOG_WARN << "[scene]   device_type="
+                             << dev.value(UpstreamConfig::instance().devTypeKey, "")
+                             << " label="
+                             << dev.value(UpstreamConfig::instance().devLabelKey, "");
                 }
             }
             dispatch(userId, jwt, scene, targets, std::move(cb));
@@ -275,6 +289,7 @@ void SceneService::dispatch(const std::string& userId, const std::string& jwt,
                 const GoBackendResponse& r) {
                 SceneDeviceResult dr;
                 dr.device_id = t.id;
+                dr.label = t.label;
                 dr.command = t.command;
                 dr.status = r.ok ? static_cast<int>(r.status) : 0;
                 acc->push_back(dr);
@@ -326,7 +341,7 @@ bool SceneService::parseDeviceStates(const std::string& deviceStates,
             return false;
         }
         out.push_back({item["device_type"].get<std::string>(),
-                       item["device_id"].get<std::string>(), cmd});
+                       item["device_id"].get<std::string>(), cmd, ""});
     }
     return true;
 }
