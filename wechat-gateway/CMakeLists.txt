@@ -153,7 +153,11 @@ if (PostgreSQL_FOUND)
     target_include_directories(wechat-gateway PRIVATE ${PostgreSQL_INCLUDE_DIRS})
 endif()
 
-# Retry-worker unit tests — in-memory repository, no libpq / Postgres required.
+# Unit tests are optional: most test sources are not present in this repo
+# snapshot, so the default build only produces the gateway binary.
+option(GATEWAY_BUILD_TESTS "Build gateway unit tests" OFF)
+
+if(GATEWAY_BUILD_TESTS)
 enable_testing()
 add_executable(retry_test
     tests/test_retry.cpp
@@ -375,3 +379,4 @@ if (PostgreSQL_FOUND)
         nlohmann_json::nlohmann_json ${PostgreSQL_LIBRARIES})
     add_test(NAME pg_repos_test COMMAND pg_repos_test)
 endif()
+endif()  # GATEWAY_BUILD_TESTS

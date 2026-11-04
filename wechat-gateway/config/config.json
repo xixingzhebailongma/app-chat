@@ -23,7 +23,7 @@
       "api_prefix": "/api"
     },
     "llm": {
-      "base_url": "http://192.168.102.209:8000/v1",
+      "base_url": "http://192.168.102.128:8000/v1",
       "model": "qwen3.6",
       "api_key": "sk-xxx",
       "enable_thinking": true,
