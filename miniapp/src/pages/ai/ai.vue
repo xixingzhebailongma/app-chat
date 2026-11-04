@@ -45,7 +45,10 @@
 
     <!-- 输入框（DeepSeek 风：自适应高度的 textarea + 圆形发送键）。
          粘贴不设按钮：长按输入框就是系统原生菜单「粘贴 / 全选 / 选择」，
-         H5 端直接用 Ctrl+V。 -->
+         H5 端直接用 Ctrl+V。
+         注意：这里故意不绑 :disabled="loading"。AI 一轮可能跑十几到几十秒
+         （多轮工具调用，或 LLM 不可达时要等网关超时），禁用它会让用户
+         在整个等待期间一个字都打不进去，体感就是「输入框坏了」。 -->
     <view class="composer">
       <textarea
         v-model="draft"
@@ -55,7 +58,6 @@
         confirm-type="send"
         placeholder="问点什么，例如「A101 有哪些设备在线」"
         placeholder-class="ph"
-        :disabled="loading"
         @confirm="send"
       />
       <view class="send" :class="{ active: draft.trim() && !loading }" @tap="send">
@@ -155,7 +157,12 @@ export default {
     },
     async send() {
       const text = this.draft.trim()
-      if (!text || this.loading) return
+      if (!text) return
+      // 等待回复期间不再禁用输入框（可继续打草稿），只挡重复发送。
+      if (this.loading) {
+        uni.showToast({ title: 'AI 正在回复，请稍候', icon: 'none' })
+        return
+      }
       this.draft = ''
       this.pushMessage({ role: 'user', content: text })
       this.loading = true
