@@ -49,7 +49,8 @@ PgSpaceRepository::PgSpaceRepository(std::shared_ptr<PgPool> pool)
 
 std::vector<Space> PgSpaceRepository::listAll() const {
     const std::string sql =
-        "SELECT space_id, name, type, enabled, source FROM spaces ORDER BY name";
+        "SELECT space_id, name, type, enabled, source, active_scene_id, scenes_seeded"
+        " FROM spaces ORDER BY name";
     PGresult* res = pool_->execParams(sql, {});
     std::vector<Space> out;
     if (okStatus(res) && PQresultStatus(res) == PGRES_TUPLES_OK) {
