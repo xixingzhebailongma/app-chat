@@ -42,7 +42,7 @@
         :key="r.time + r.space_id + r.name + i"
         class="list-cell list-cell-center"
       >
-        <view class="r-icon"><uni-icons type="person" size="22" color="var(--text-2)" /></view>
+        <view class="r-icon"><uni-icons type="person" size="22" color="var(--brand)" /></view>
         <view class="r-main">
           <view class="r-title">
             <text class="r-label">{{ r.name || '未识别' }}</text>
@@ -221,8 +221,8 @@ export default {
 <style scoped>
 .records {
   padding-top: 24rpx;
-  padding-left: 24rpx;
-  padding-right: 24rpx;
+  padding-left: 36rpx;
+  padding-right: 36rpx;
 }
 
 .filters {
@@ -257,14 +257,14 @@ export default {
 .r-icon {
   width: 80rpx;
   height: 80rpx;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   margin-right: 22rpx;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-2);
-  background: var(--info-bg);
+  color: var(--brand);
+  background: var(--brand-soft);
 }
 .r-main {
   flex: 1;

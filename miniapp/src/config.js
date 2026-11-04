@@ -9,17 +9,14 @@
 const env = import.meta.env
 
 export default {
+  // 应用版本：单一来源。要发版只改这一处，页面不再写死字面量。
+  APP_VERSION: '1.0.0',
   // 网关地址；真机调试改为局域网 IP，生产用 https 域名。
-  BASE_URL: env.VITE_BASE_URL !== undefined
-    ? env.VITE_BASE_URL
-    : 'http://127.0.0.1:8080',
+  BASE_URL: env.VITE_BASE_URL || 'http://127.0.0.1:8080',
   // WebSocket 地址；留空则从 BASE_URL 自动派生。
   WS_BASE_URL: env.VITE_WS_BASE_URL || '',
   // 是否走本地 mock：显式 VITE_USE_MOCK=false 才连真实网关。
   USE_MOCK: (env.VITE_USE_MOCK ?? 'true') !== 'false',
-  // 开发登录后门：true 时登录走 /api/miniapp/dev-login（用户名密码直接换 JWT，
-  // 跳过微信 jscode2session），仅供本地浏览器/H5 联调，生产禁用。
-  DEV_LOGIN: env.VITE_DEV_LOGIN === 'true',
   // 订阅消息模板 ID（真实模板 ID，需与网关 config 的 wechat_miniapp.templates 一致，
   // 且 ≤3 个）。为空时不拉起微信订阅授权（演示/未配置）。
   SUBSCRIBE_TMPL_IDS: (env.VITE_SUBSCRIBE_TMPL_IDS || '')

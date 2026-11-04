@@ -80,7 +80,7 @@ export default {
 .sp-btn {
   font-size: 24rpx;
   padding: 10rpx 24rpx;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
 }
 .sp-btn.enable {
   color: #fff;

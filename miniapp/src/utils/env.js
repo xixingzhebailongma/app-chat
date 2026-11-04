@@ -13,8 +13,11 @@ export function toNum(v) {
   return null
 }
 
-// 解析传感器 app，返回 { temperature, humidity, co2 }（单位：℃ / % / ppm），
-// 任一值缺失时为 null；无 app / 非传感器 / 解析失败时返回 null。
+// 解析传感器 app，返回全部已识别指标的数值对象
+// （temperature/humidity/co2/light/pm25/pir，单位 ℃/%RH/ppm/lux/μg·m⁻³/布尔）；
+// 无 app / 非传感器 / 解析失败 / 全部字段缺失时返回 null。
+const METRIC_KEYS = ['temperature', 'humidity', 'co2', 'light', 'pm25', 'pir']
+
 export function parseSensorApp(d) {
   if (!d || typeof d.app !== 'string' || !d.app) return null
   let o
@@ -24,15 +27,18 @@ export function parseSensorApp(d) {
     return null
   }
   if (!o || typeof o !== 'object') return null
-  const env = {
-    temperature: toNum(o.temperature),
-    humidity: toNum(o.humidity),
-    co2: toNum(o.co2),
-  }
-  // 三项全空视作无环境数据
-  if (env.temperature == null && env.humidity == null && env.co2 == null) {
-    return null
-  }
+  const env = {}
+  METRIC_KEYS.forEach((k) => {
+    if (o[k] === undefined || o[k] === null) return
+    if (k === 'pir') {
+      env[k] = typeof o[k] === 'boolean' ? o[k] : o[k] === 'true' || o[k] === 1 || o[k] === '1'
+      return
+    }
+    const n = toNum(o[k])
+    if (n != null) env[k] = n
+  })
+  // 全部指标缺失视作无环境数据
+  if (!Object.keys(env).length) return null
   return env
 }
 

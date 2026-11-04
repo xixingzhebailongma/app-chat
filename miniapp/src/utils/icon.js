@@ -2,14 +2,14 @@
 // uni-icons 无专用设备图标，取语义最接近的线性图标；颜色统一由组件用 color 传入（中性单色），
 // 不用彩色区分，语义色只留给 StatusTag 承载。
 
-// 底部 tab 图标
+// 底部 tab 图标（选中态自动加 -filled 填充变体，与 smart 端一致）
 export const TAB_ICONS = {
   home: 'home', // 首页
-  classroom: 'location', // 我的教室
-  devices: 'gear', // 设备
+  classroom: 'home', // 我的教室
+  devices: 'gear', // 设备控制
   alerts: 'notification', // 告警
-  profile: 'person', // 我的
   ai: 'chatbubble', // AI 助手
+  profile: 'person', // 我的
 }
 
 // 设备类型 → 图标（综合屏 API 契约：device_type ∈ zigbee / fuhe-*，

@@ -23,7 +23,7 @@ export default {
   align-items: center;
   height: 40rpx;
   padding: 0 14rpx;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   font-size: 22rpx;
   line-height: 1;
   color: var(--text-2);

@@ -129,10 +129,10 @@ export default {
 
 <style scoped>
 .detail {
-  padding: 24rpx;
+  padding: 36rpx;
 }
 .summary {
-  padding: 28rpx 28rpx;
+  padding: 32rpx 32rpx;
 }
 .s-head {
   display: flex;
@@ -147,20 +147,22 @@ export default {
 .s-sub {
   display: block;
   margin-top: 14rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .s-op {
   display: block;
   margin-top: 10rpx;
-  font-size: 24rpx;
-  color: var(--text-2);
+  font-size: 26rpx;
+  font-weight: 400;
+  color: var(--text-3);
 }
 .s-actions {
   margin-top: 24rpx;
 }
 .tl {
-  padding: 12rpx 28rpx;
+  padding: 12rpx 32rpx;
 }
 .tl-row {
   display: flex;
@@ -186,19 +188,21 @@ export default {
 }
 .tl-remark {
   margin-top: 8rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .tl-sub {
   margin-top: 6rpx;
-  font-size: 22rpx;
-  color: var(--text-4);
+  font-size: 24rpx;
+  font-weight: 400;
+  color: var(--text-3);
 }
 .tl-empty {
   padding: 32rpx 0;
   text-align: center;
-  font-size: 24rpx;
-  color: var(--text-4);
+  font-size: 28rpx;
+  color: var(--text-3);
 }
 .empty-actions {
   display: flex;

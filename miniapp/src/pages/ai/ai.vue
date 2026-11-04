@@ -28,7 +28,14 @@
         :class="m.role === 'user' ? 'msg-user' : 'msg-ai'"
       >
         <view v-if="m.role === 'assistant'" class="avatar">AI</view>
-        <view class="bubble">{{ m.content }}</view>
+        <view class="bubble">
+          <!-- 文本选中走系统原生行为，和 Windows / 浏览器一致：
+               长按（H5 是鼠标拖选）拉出选区 → 系统自带菜单「复制 / 全选」。
+               微信 text 组件的 selectable 已废弃（1.1.0），官方推荐 user-select（2.12.1+），
+               两个都写兼容旧基础库；必须是 text 组件，view 无法选中。
+               不要再绑 @longpress 自定义复制，那会吃掉原生长按菜单。 -->
+          <text class="bubble-text" user-select selectable>{{ m.content }}</text>
+        </view>
       </view>
       <view v-if="loading" id="msg-loading" class="msg msg-ai">
         <view class="avatar">AI</view>
@@ -36,7 +43,9 @@
       </view>
     </scroll-view>
 
-    <!-- 输入框（DeepSeek 风：自适应高度的 textarea + 圆形发送键） -->
+    <!-- 输入框（DeepSeek 风：自适应高度的 textarea + 圆形发送键）。
+         粘贴不设按钮：长按输入框就是系统原生菜单「粘贴 / 全选 / 选择」，
+         H5 端直接用 Ctrl+V。 -->
     <view class="composer">
       <textarea
         v-model="draft"
@@ -105,6 +114,7 @@ export default {
       saveAiConversationId('')
       store.aiMessages = []
     },
+    // 复制 / 粘贴都交给系统原生：气泡长按选中、输入框长按粘贴，不自己实现。
     async restoreHistory() {
       if (store.aiMessages.length) return // 已有消息不重复拉取
       // 已有会话 id：拉历史回填（跨刷新）。
@@ -187,6 +197,18 @@ export default {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+/* #ifdef H5 */
+/* H5 端 uni 默认渲染 44px 顶部导航栏，但它不占 .ai 的高度，
+   100vh 会让整列超出视口，底部输入框和 tabbar 被裁掉。
+   扣掉导航栏高度，保证「标题 / 对话 / 输入框 / tabbar」一屏装下。 */
+.ai {
+  height: calc(100vh - 44px);
+}
+/* #endif */
+
+.ai {
   padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
 }
 
@@ -212,7 +234,7 @@ export default {
   padding: 6rpx 20rpx;
 }
 .new-chat:active {
-  background: rgba(91, 141, 239, 0.18);
+  background: var(--primary-hover);
 }
 
 /* 空态欢迎区 */
@@ -273,7 +295,7 @@ export default {
   border-radius: 30rpx;
 }
 .quick-chip:active {
-  background: rgba(91, 141, 239, 0.18);
+  background: var(--primary-hover);
 }
 
 /* 消息区 */
@@ -281,6 +303,9 @@ export default {
   flex: 1;
   min-height: 0;
   padding: 20rpx 24rpx 8rpx;
+  /* 放开选中，H5 端可以跨气泡拖选（像浏览器里选一段对话） */
+  user-select: text;
+  -webkit-user-select: text;
 }
 .msg {
   display: flex;
@@ -310,8 +335,19 @@ export default {
 .bubble {
   font-size: 28rpx;
   line-height: 1.6;
+}
+/* 可选中的正文：长按可拖选文字并唤起系统复制菜单 */
+.bubble-text {
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* 小程序端 text 组件需显式放开选区（user-select 属性已废弃，双保险） */
+.msg-user .bubble-text,
+.msg-ai .bubble-text {
+  user-select: text;
+  -webkit-user-select: text;
 }
 .msg-ai .bubble {
   max-width: 76%;
@@ -349,7 +385,20 @@ export default {
   font-size: 28rpx;
   line-height: 1.5;
   color: var(--text-1);
+  /* 输入框必须允许选择，否则无法像 Windows 一样拖拽划选已输入的文字。
+     uni-app H5 基础样式有 html,body{user-select:none}，会传染到内部 textarea。 */
+  user-select: text;
+  -webkit-user-select: text;
 }
+/* #ifdef H5 */
+/* H5 端 textarea 是原生元素，需穿透组件作用域把选区放开 */
+:deep(textarea),
+:deep(.uni-textarea),
+:deep(.uni-textarea-textarea) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* #endif */
 .ph {
   color: var(--text-4);
 }

@@ -28,12 +28,14 @@ export default {
 .title {
   margin-top: 24rpx;
   font-size: 28rpx;
-  color: var(--text-2);
+  font-weight: 500;
+  color: var(--text-3);
 }
 .desc {
   margin-top: 8rpx;
-  font-size: 24rpx;
-  color: var(--text-4);
+  font-size: 26rpx;
+  font-weight: 400;
+  color: var(--text-3);
   text-align: center;
 }
 </style>

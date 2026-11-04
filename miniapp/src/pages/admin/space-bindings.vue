@@ -204,8 +204,8 @@ export default {
 <style scoped>
 .bindings {
   padding-top: 24rpx;
-  padding-left: 24rpx;
-  padding-right: 24rpx;
+  padding-left: 36rpx;
+  padding-right: 36rpx;
 }
 
 .more-action {
@@ -249,7 +249,7 @@ export default {
   color: var(--primary);
   background: var(--primary-soft);
   border: 1rpx solid var(--primary-border);
-  border-radius: 8rpx;
+  border-radius: 12rpx;
 }
 .bind-btn::after {
   border: none;
@@ -270,7 +270,7 @@ export default {
   margin: 0 14rpx 12rpx 0;
   background: var(--info-bg);
   border: 1rpx solid var(--info-border);
-  border-radius: 8rpx;
+  border-radius: 12rpx;
 }
 .chip-label {
   font-size: 24rpx;

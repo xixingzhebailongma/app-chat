@@ -136,8 +136,8 @@ export default {
 <style scoped>
 .types {
   padding-top: 24rpx;
-  padding-left: 24rpx;
-  padding-right: 24rpx;
+  padding-left: 36rpx;
+  padding-right: 36rpx;
 }
 
 .more-action {
@@ -146,8 +146,9 @@ export default {
 .hint {
   display: block;
   margin: 8rpx 0 12rpx;
-  font-size: 22rpx;
-  color: var(--text-4);
+  font-size: 24rpx;
+  font-weight: 400;
+  color: var(--text-3);
   line-height: 1.5;
 }
 
@@ -174,13 +175,14 @@ export default {
   flex-direction: column;
 }
 .t-name {
-  font-size: 30rpx;
-  font-weight: 600;
+  font-size: 28rpx;
+  font-weight: 500;
   color: var(--text-1);
 }
 .t-code {
   margin-top: 4rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .t-actions {
@@ -197,11 +199,12 @@ export default {
   margin: 0 12rpx 8rpx 0;
   background: var(--info-bg);
   border: 1rpx solid var(--info-border);
-  border-radius: 8rpx;
+  border-radius: 12rpx;
 }
 .act-label {
   margin-left: 6rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 400;
   color: var(--text-2);
 }
 
@@ -238,7 +241,7 @@ export default {
   margin-bottom: 16rpx;
 }
 .sheet-title {
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: 600;
   color: var(--text-1);
 }
@@ -253,7 +256,8 @@ export default {
 .field-label {
   display: block;
   margin-bottom: 12rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .field {
@@ -261,8 +265,8 @@ export default {
   padding: 0 28rpx;
   background: var(--bg);
   border: 1rpx solid var(--border);
-  border-radius: 8rpx;
-  font-size: 30rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
 }
 .ph {
   color: var(--text-4);

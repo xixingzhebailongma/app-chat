@@ -26,15 +26,6 @@ export const api = {
     })
   },
 
-  // 开发登录后门（仅本地联调，DEV_LOGIN=true 时用）：用户名密码直接换 JWT，绕过微信。
-  devLogin(username, password) {
-    return request({
-      url: base() + '/api/miniapp/dev-login',
-      method: 'POST',
-      data: { username, password },
-    })
-  },
-
   me() {
     return useMock() ? mockApi.me() : request({ url: base() + '/api/miniapp/me' })
   },
@@ -183,6 +174,27 @@ export const api = {
         })
   },
 
+  // 通知目标绑定（仅 admin；channel ∈ wechat_miniapp | sms | dingtalk | wecom）
+  // GET 返回 {bindings:[{user_id, channel, external_id, updated_at}]}
+  notifyBindings(channel) {
+    return useMock()
+      ? mockApi.notifyBindings(channel)
+      : request({
+          url: base() + '/api/notify/bindings?channel=' + encodeURIComponent(channel),
+        })
+  },
+  saveNotifyBinding(payload) {
+    return useMock()
+      ? mockApi.saveNotifyBinding(payload)
+      : request({ url: base() + '/api/notify/bindings', method: 'POST', data: payload })
+  },
+  deleteNotifyBinding(channel, userId) {
+    const qs = '?channel=' + encodeURIComponent(channel) + '&user_id=' + encodeURIComponent(userId)
+    return useMock()
+      ? mockApi.deleteNotifyBinding(channel, userId)
+      : request({ url: base() + '/api/notify/bindings' + qs, method: 'DELETE' })
+  },
+
   // 进出记录（空间/日期/方式/分页，服务端做权限过滤）
   accessRecords(spaceId, date, page, pageSize, authType) {
     const parts = []
@@ -311,8 +323,10 @@ export const api = {
 
   // AI 助手：自然语言对话（网关 /api/ai/chat）。conversationId 为空 => 新建会话；
   // 非空 => 沿用。messages 为本轮新增消息（通常 1 条 user），历史由服务端记忆。
-  // 单次可能多轮工具调用 + LLM 推理，超时放宽到 60s（无 mock，需真实网关）。
+  // 单次可能多轮工具调用 + LLM 推理，超时放宽到 60s（真实网关）。
+  // mock 模式走本地 mockApi.aiChat（意图匹配 + mock 数据），无需后端也能演示。
   aiChat(messages, conversationId) {
+    if (useMock()) return mockApi.aiChat(messages, conversationId)
     const data = { messages }
     if (conversationId) data.conversation_id = conversationId
     return request({
@@ -323,9 +337,11 @@ export const api = {
     })
   },
   aiConversations() {
+    if (useMock()) return mockApi.aiConversations()
     return request({ url: base() + '/api/ai/conversations' })
   },
   aiMessages(conversationId) {
+    if (useMock()) return mockApi.aiMessages(conversationId)
     return request({
       url:
         base() +
@@ -335,6 +351,7 @@ export const api = {
     })
   },
   aiDeleteConversation(conversationId) {
+    if (useMock()) return mockApi.aiDeleteConversation(conversationId)
     return request({
       url:
         base() +

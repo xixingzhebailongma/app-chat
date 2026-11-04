@@ -4,7 +4,7 @@
       "path": "pages/login/login",
       "style": {
         "navigationBarTitleText": "",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black"
       }
     },
@@ -12,115 +12,125 @@
       "path": "pages/home/home",
       "style": {
         "navigationBarTitleText": "智慧校园数字基座",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/classroom/classroom",
       "style": {
         "navigationBarTitleText": "我的教室",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/devices/devices",
       "style": {
         "navigationBarTitleText": "设备与空间",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/alerts/alerts",
       "style": {
         "navigationBarTitleText": "告警",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/alerts/detail",
       "style": {
         "navigationBarTitleText": "告警详情",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/ai/ai",
       "style": {
         "navigationBarTitleText": "AI 助手",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/profile/profile",
       "style": {
         "navigationBarTitleText": "我的",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/records/records",
       "style": {
         "navigationBarTitleText": "进出记录",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/admin/space-bindings",
       "style": {
         "navigationBarTitleText": "教师教室绑定",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/admin/space-types",
       "style": {
         "navigationBarTitleText": "空间类型管理",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
       }
     },
     {
       "path": "pages/admin/spaces",
       "style": {
         "navigationBarTitleText": "教室管理",
-        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarBackgroundColor": "#fffdf8",
         "navigationBarTextStyle": "black",
         "enablePullDownRefresh": true,
-        "backgroundColor": "#f5f7fa"
+        "backgroundColor": "#F4EFE5"
+      }
+    },
+    {
+      "path": "pages/admin/space-detail",
+      "style": {
+        "navigationBarTitleText": "教室详情",
+        "navigationBarBackgroundColor": "#fffdf8",
+        "navigationBarTextStyle": "black",
+        "enablePullDownRefresh": true,
+        "backgroundColor": "#F4EFE5"
       }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "智慧校园",
-    "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f5f7fa"
+    "navigationBarBackgroundColor": "#fffdf8",
+    "backgroundColor": "#F4EFE5"
   },
   "easycom": {
     "autoscan": true,

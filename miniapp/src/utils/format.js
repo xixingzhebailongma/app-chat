@@ -77,7 +77,9 @@ export function alertStatusTone(status) {
 // 时间戳/字符串 → 「MM-DD HH:mm」，容错：空值返回 ''
 export function formatTime(t) {
   if (!t) return ''
-  const d = typeof t === 'number' ? new Date(t) : new Date(String(t).replace(/-/g, '/'))
+  // 先按原样解析（ISO-8601 带 T/Z 只有这条能过），再退回「-」换「/」的老写法
+  let d = typeof t === 'number' ? new Date(t) : new Date(String(t))
+  if (isNaN(d.getTime())) d = new Date(String(t).replace(/-/g, '/'))
   if (isNaN(d.getTime())) return ''
   const p = (n) => (n < 10 ? '0' + n : '' + n)
   return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`

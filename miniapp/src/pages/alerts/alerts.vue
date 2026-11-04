@@ -81,7 +81,7 @@
     <view v-if="alerts.length">
       <view class="list-group">
         <view v-for="a in alerts" :key="a.alert_id" class="list-cell" hover-class="cell-hover" @tap="goDetail(a)">
-          <view class="a-icon"><uni-icons :type="eventTypeIcon(a.event_type)" size="20" color="var(--text-2)" /></view>
+          <view class="a-icon"><uni-icons :type="eventTypeIcon(a.event_type)" size="20" color="var(--brand)" /></view>
           <view class="a-main">
             <view class="a-title">
               <text class="a-label">{{ eventLabel(a.event_type) }}</text>
@@ -400,12 +400,13 @@ export default {
 .alerts {
   /* 注意：bottom 交给 .page-pad 让位给 tabbar，这里不要用 padding shorthand */
   padding-top: 24rpx;
-  padding-left: 24rpx;
-  padding-right: 24rpx;
+  padding-left: 36rpx;
+  padding-right: 36rpx;
 }
 .filter-bar {
   display: flex;
-  gap: 16rpx;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
 }
 .filter-pill {
   flex: 1;
@@ -415,20 +416,21 @@ export default {
   height: 64rpx;
   background: #fff;
   border: 1rpx solid var(--border);
-  border-radius: 8rpx;
-  font-size: 26rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  font-weight: 400;
   color: var(--text-2);
 }
 .filter-pill.active {
-  background: var(--bg-soft);
-  color: var(--text-1);
+  background: var(--primary);
+  color: #fff;
   border-color: var(--primary);
 }
 
 .type-bar {
   white-space: nowrap;
-  margin: 20rpx -24rpx 0;
-  padding: 0 24rpx;
+  margin: 20rpx -36rpx 0;
+  padding: 0 36rpx;
 }
 .type-pill {
   display: inline-flex;
@@ -438,13 +440,14 @@ export default {
   margin-right: 14rpx;
   background: #fff;
   border: 1rpx solid var(--border);
-  border-radius: 8rpx;
-  font-size: 24rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  font-weight: 400;
   color: var(--text-2);
 }
 .type-pill.active {
-  background: var(--bg-soft);
-  color: var(--text-1);
+  background: var(--primary-soft);
+  color: var(--primary);
   border-color: var(--primary);
 }
 
@@ -459,23 +462,25 @@ export default {
   align-items: center;
   justify-content: space-between;
   height: 80rpx;
-  padding: 0 24rpx;
+  padding: 0 32rpx;
 }
 .filter-label {
   font-size: 28rpx;
+  font-weight: 400;
   color: var(--text-1);
 }
 
 .summary {
   margin: 22rpx 4rpx 4rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .summary .n {
-  font-weight: 600;
+  font-weight: 500;
 }
 .summary .hint {
-  color: var(--text-4);
+  color: var(--text-3);
 }
 .stat-row {
   display: flex;
@@ -495,8 +500,8 @@ export default {
 }
 .stat-n {
   font-size: 40rpx;
-  font-weight: 700;
-  line-height: 1;
+  font-weight: 600;
+  line-height: 1.2;
   color: var(--text-1);
 }
 .stat-dot {
@@ -508,7 +513,8 @@ export default {
 }
 .stat-l {
   margin-top: 8rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .type-line {
@@ -519,8 +525,9 @@ export default {
   padding: 0 4rpx;
 }
 .type-item {
-  font-size: 22rpx;
-  color: var(--text-2);
+  font-size: 24rpx;
+  font-weight: 400;
+  color: var(--text-3);
 }
 .space-line {
   display: flex;
@@ -530,21 +537,23 @@ export default {
   padding: 0 4rpx;
 }
 .space-label {
-  font-size: 22rpx;
-  color: var(--text-4);
+  font-size: 24rpx;
+  color: var(--text-3);
 }
 .space-item {
-  font-size: 22rpx;
-  color: var(--text-2);
+  font-size: 24rpx;
+  font-weight: 400;
+  color: var(--text-3);
 }
 .unbound-hint {
   margin-top: 16rpx;
   padding: 16rpx 20rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 400;
   color: var(--warning);
   background: var(--warning-bg);
   border: 1rpx solid var(--warning-border);
-  border-radius: 8rpx;
+  border-radius: 12rpx;
 }
 
 .list-group {
@@ -553,14 +562,14 @@ export default {
 .a-icon {
   width: 80rpx;
   height: 80rpx;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   margin-right: 22rpx;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-2);
-  background: var(--info-bg);
+  color: var(--brand);
+  background: var(--brand-soft);
 }
 .a-main {
   flex: 1;
@@ -572,19 +581,21 @@ export default {
   align-items: center;
 }
 .a-label {
-  font-size: 30rpx;
-  font-weight: 600;
+  font-size: 28rpx;
+  font-weight: 500;
   color: var(--text-1);
   margin-right: 14rpx;
 }
 .a-sub {
   margin-top: 6rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .a-remark {
   margin-top: 6rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
+  font-weight: 400;
   color: var(--text-3);
 }
 .handle-btn {
@@ -593,12 +604,13 @@ export default {
   height: 60rpx;
   padding: 0 28rpx;
   margin: 0 0 0 16rpx;
-  font-size: 26rpx;
+  font-size: 28rpx;
+  font-weight: 500;
   line-height: 60rpx;
   color: var(--primary);
   background: var(--primary-soft);
   border: 1rpx solid var(--primary-border);
-  border-radius: 8rpx;
+  border-radius: 999rpx;
 }
 .handle-btn::after {
   border: none;
@@ -607,14 +619,15 @@ export default {
 .load-more {
   padding: 24rpx 0;
   text-align: center;
-  font-size: 26rpx;
+  font-size: 28rpx;
+  font-weight: 400;
   color: var(--primary);
 }
 .load-end {
   padding: 24rpx 0;
   text-align: center;
-  font-size: 24rpx;
-  color: var(--text-4);
+  font-size: 26rpx;
+  color: var(--text-3);
 }
 
 .mask {
@@ -648,13 +661,14 @@ export default {
   margin-bottom: 12rpx;
 }
 .sheet-title {
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: 600;
   color: var(--text-1);
 }
 .sheet-sub {
   display: block;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 400;
   color: var(--text-3);
   margin-bottom: 20rpx;
 }
@@ -671,8 +685,9 @@ export default {
   margin-bottom: 24rpx;
   background: var(--bg-soft);
   border: 1rpx solid var(--border);
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   font-size: 28rpx;
+  font-weight: 400;
 }
 .ph {
   color: var(--text-4);

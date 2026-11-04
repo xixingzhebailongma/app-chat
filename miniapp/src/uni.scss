@@ -1,40 +1,176 @@
 /**
- * 主题变量（Element Plus 风格，与 App.vue 的 CSS 变量保持一致）。
- * 主色 #2f5597（成熟钢蓝，与 App.vue 的 CSS 变量保持一致）。
+ * 主题变量（对齐 qingzhou.html「晴昼」设计语言）。
+ * 主按钮与交互强调统一为青墨 #245e70，与 App.vue 的 CSS 变量取值一一对应。
+ * 设计理念：暖米底 + 暖白渐变面板 + 低饱和柔和投影；语义色仅用于状态（本次未收敛）。
+ * 单位换算：设计稿 1px = 2rpx（750rpx 基准）。
  */
-$uni-color-primary: #5b8def;
-$uni-color-success: #67c23a;
-$uni-color-warning: #e6a23c;
-$uni-color-error: #f56c6c;
 
-$uni-text-color: #303133;
-$uni-text-color-inverse: #fff;
-$uni-text-color-grey: #909399;
-$uni-text-color-placeholder: #c0c4cc;
-$uni-text-color-disable: #c0c4cc;
+/* ---------- 品牌色（仅交互强调） ---------- */
+$uni-color-primary:        #245e70;   /* 青墨：交互强调（选中态/链接/开关 ON/激活 Tab） */
+$uni-color-primary-dark:   #1b4a59;   /* 按压态 */
+$uni-color-primary-light:  #e1ece5;   /* 品牌浅底（选中 chip、图标底色） */
 
-$uni-bg-color: #ffffff;
-$uni-bg-color-grey: #f5f7fa;
-$uni-bg-color-hover: #f5f7fa;
-$uni-bg-color-mask: rgba(0, 0, 0, 0.5);
+/* ---------- 主色别名（兼容旧命名） ---------- */
+$ink:        #245e70;   /* 主操作按钮实底 */
+$ink-2:      #1b4a59;   /* 按压态 */
 
-$uni-border-color: #dcdfe6;
+/* ---------- 语义色（D2 待定，暂保持原值） ---------- */
+$uni-color-success: #0F7038;
+$uni-color-warning: #A34A08;
+$uni-color-error:   #C62828;
 
-$uni-font-size-sm: 24rpx;
-$uni-font-size-base: 28rpx;
-$uni-font-size-lg: 32rpx;
+/* ---------- 中性色 ---------- */
+$uni-text-color:            #243b49;   /* 正文主色 */
+$uni-text-color-inverse:    #ffffff;
+$uni-text-color-grey:       #526b77;   /* 辅助文字 */
+$uni-text-color-placeholder:#9aa9ac;
+$uni-text-color-disable:    #9aa9ac;
 
-$uni-border-radius-sm: 6rpx;
-$uni-border-radius-base: 8rpx;
-$uni-border-radius-lg: 12rpx;
+$uni-bg-color:      #fffdf8;
+$uni-bg-color-grey: #f4efe5;   /* 页面背景（暖米） */
+$uni-bg-color-hover:#f1eadb;
+$uni-bg-color-mask: rgba(36, 59, 73, 0.45);
+
+$uni-border-color: #becdcf;   /* 分割线、卡片发丝线（装饰性） */
+
+/* ---------- 字号（对齐参考图分级） ---------- */
+$uni-font-size-sm:   24rpx;
+$uni-font-size-base: 30rpx;
+$uni-font-size-lg:   32rpx;
+$fs-h1:  48rpx;   /* 大标题 24px 加粗 */
+$fs-h2:  36rpx;   /* 卡片标题 18px 加粗 */
+$fs-sub: 28rpx;   /* 副标题 14px 灰 */
+$fs-num: 64rpx;   /* 数据大数字 */
+
+/* ---------- 圆角（大圆角体系） ---------- */
+$uni-border-radius-sm:     16rpx;
+$uni-border-radius-base:   40rpx;   /* 卡片圆角 20px */
+$uni-border-radius-lg:     48rpx;   /* 弹窗圆角 */
 $uni-border-radius-circle: 50%;
+$uni-border-radius-pill:   999rpx;  /* 按钮/标签全胶囊 */
 
-$uni-spacing-row-sm: 10rpx;
-$uni-spacing-row-base: 20rpx;
-$uni-spacing-row-lg: 30rpx;
+/* ---------- 间距 ---------- */
+$uni-spacing-row-sm:   12rpx;
+$uni-spacing-row-base: 24rpx;
+$uni-spacing-row-lg:   32rpx;
 
-$uni-spacing-col-sm: 8rpx;
-$uni-spacing-col-base: 16rpx;
-$uni-spacing-col-lg: 24rpx;
+$uni-spacing-col-sm:   12rpx;
+$uni-spacing-col-base: 24rpx;
+$uni-spacing-col-lg:   32rpx;
 
 $uni-opacity-disabled: 0.4;
+
+/* ============================================================
+ * 设计 Token 扩展（对齐 smart-classroom-mp，供页面直接引用）
+ * ============================================================ */
+
+/* 语义浅色底（标签/选中态背景） */
+$success-light:  #E6F0E8;
+$warning-light:  #F6E8CE;
+$danger-light:   #F7E4E1;
+$disabled-light: #f1eadb;   /* card-2：分段控制器/次按钮/输入框浅暖填充 */
+
+/* 文字色阶 */
+$text-1: #243b49;
+$text-2: #4d6571;
+$text-3: #526b77;
+$text-4: #9aa9ac;
+
+/* 背景 */
+$bg-page: #f4efe5;
+$bg-card: #fffdf8;
+$bg-card-end: #f5f1e8;
+$bg-soft: #f1eadb;
+$line:    #becdcf;
+$line-strong: #75969a;
+
+/* 设备分类点缀色（统一青墨系，仅小图标/小圆点用，禁止大面积铺背景） */
+$cat-light:    #4a8fa0;
+$cat-climate:  #245e70;
+$cat-security: #245e70;
+$cat-media:    #4a8fa0;
+$cat-plug:     #245e70;
+$cat-sensor:   #245e70;
+$cat-other:    #526b77;
+
+/* 数据可视化色阶（统一青墨系） */
+$acc-blue:        #245e70;
+$acc-blue-light:  #4a8fa0;
+$acc-blue-soft:   #9ec6c9;
+$acc-blue-pale:   #e1ece5;
+
+/* 间距体系 */
+$sp-8:  8rpx;
+$sp-12: 12rpx;
+$sp-16: 16rpx;
+$sp-20: 20rpx;
+$sp-24: 24rpx;
+$sp-28: 28rpx;
+$sp-32: 32rpx;
+$sp-40: 40rpx;
+$sp-48: 48rpx;
+$page-pad: 32rpx;   /* 页面左右边距 16px */
+$card-pad: 40rpx;   /* 卡片内边距 20px */
+$card-gap: 28rpx;   /* 卡片间距 */
+
+/* 圆角 */
+$r-card:  40rpx;    /* 卡片 20px */
+$r-item:  24rpx;    /* 列表项/输入框 12px */
+$r-btn:   999rpx;   /* 主按钮（胶囊，对齐参考图） */
+$r-btn-soft: 32rpx; /* 按钮 16px（备用非胶囊） */
+$r-tag:   999rpx;
+$r-icon:  24rpx;
+
+/* 阴影（柔和低饱和，禁止硬阴影/粗边框） */
+$shadow-card:  0 14rpx 36rpx rgba(96, 81, 51, 0.075);
+$shadow-float: 0 12rpx 32rpx rgba(96, 81, 51, 0.10);
+$shadow-pop:   0 16rpx 48rpx rgba(96, 81, 51, 0.16);
+$shadow-panel: 0 44rpx 110rpx rgba(96, 81, 51, 0.075), inset 0 1rpx 0 rgba(255, 255, 255, 0.07);
+$shadow-btn:   0 12rpx 24rpx rgba(36, 94, 112, 0.26);
+
+/* 字体 */
+$font-num:  "DIN Alternate", "Helvetica Neue", Arial, sans-serif;
+$font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+            "Helvetica Neue", "PingFang SC", "Hiragino Sans GB",
+            "Microsoft YaHei", sans-serif;
+
+/* 动效 */
+$ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+$t-micro:  150ms;
+$t-toggle: 240ms;
+
+/* ============================================================
+ * 常用 Mixins
+ * ============================================================ */
+@mixin flex($jc: flex-start, $ai: center, $dir: row) {
+  display: flex;
+  flex-direction: $dir;
+  justify-content: $jc;
+  align-items: $ai;
+}
+
+@mixin ellipsis($n: 1) {
+  @if $n == 1 {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: $n;
+    overflow: hidden;
+    word-break: break-all;
+  }
+}
+
+@mixin num {
+  font-family: $font-num;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1rpx;
+}
+
+@mixin safe-bottom($pad: 20rpx) {
+  padding-bottom: $pad;
+  padding-bottom: calc(#{$pad} + constant(safe-area-inset-bottom));
+  padding-bottom: calc(#{$pad} + env(safe-area-inset-bottom));
+}

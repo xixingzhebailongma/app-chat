@@ -8,11 +8,22 @@ import { store, isLoggedIn } from '../store/index'
 const spaces = [
   { space_id: 'spc_a8acdd5c', name: 'A101 教室', type: 'standard', enabled: true, source: 'edge' },
   { space_id: 'spc_std_a102', name: 'A102 教室', type: 'standard', enabled: true, source: 'edge' },
+  { space_id: 'spc_std_a103', name: 'A103 教室', type: 'standard', enabled: true, source: 'edge' },
+  { space_id: 'spc_std_a104', name: 'A104 教室', type: 'standard', enabled: true, source: 'edge' },
+  { space_id: 'spc_std_a201', name: 'A201 教室', type: 'standard', enabled: true, source: 'edge' },
+  { space_id: 'spc_std_a202', name: 'A202 教室', type: 'standard', enabled: true, source: 'edge' },
+  { space_id: 'spc_std_b301', name: 'B301 教室', type: 'standard', enabled: true, source: 'edge' },
   { space_id: 'spc_b7bee44d', name: '多媒体报告厅', type: 'lecture', enabled: true, source: 'edge' },
+  { space_id: 'spc_lec_2', name: '学术报告厅', type: 'lecture', enabled: true, source: 'edge' },
+  { space_id: 'spc_lec_3', name: '阶梯教室 301', type: 'lecture', enabled: true, source: 'edge' },
   { space_id: 'spc_office_1', name: '教师办公室', type: 'office', enabled: true, source: 'edge' },
+  { space_id: 'spc_office_2', name: '教务办公室', type: 'office', enabled: true, source: 'edge' },
   { space_id: 'spc_gym_1', name: '体育馆', type: 'gym', enabled: true, source: 'edge' },
   { space_id: 'spc_lab_1', name: '化学实验室', type: 'lab', enabled: true, source: 'edge' },
+  { space_id: 'spc_lab_2', name: '物理实验室', type: 'lab', enabled: true, source: 'edge' },
+  { space_id: 'spc_lab_3', name: '生物实验室', type: 'lab', enabled: true, source: 'edge' },
   { space_id: 'spc_lib_1', name: '图书馆', type: 'library', enabled: true, source: 'edge' },
+  { space_id: 'spc_lib_2', name: '电子阅览室', type: 'library', enabled: true, source: 'edge' },
   { space_id: 'spc_canteen_1', name: '学生食堂', type: 'canteen', enabled: true, source: 'edge' },
 ]
 
@@ -66,6 +77,74 @@ const devices = {
     { device_id: 'dev_ctn_door', label: '入口门禁', type: 'door', online: true },
     { device_id: 'dev_ctn_sens', label: '温湿度传感器', type: 'sensor', online: false },
   ],
+  spc_std_a103: [
+    { device_id: 'dev_a103_light', label: '教室照明', type: 'light', online: true },
+    { device_id: 'dev_a103_sign', label: '电子班牌', type: 'sign', online: true },
+    { device_id: 'dev_a103_screen', label: '综合屏', type: 'screen', online: false },
+    { device_id: 'dev_a103_door', label: '前门门禁', type: 'door', online: true },
+    { device_id: 'dev_a103_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
+  spc_std_a104: [
+    { device_id: 'dev_a104_light', label: '教室照明', type: 'light', online: true },
+    { device_id: 'dev_a104_sign', label: '电子班牌', type: 'sign', online: true },
+    { device_id: 'dev_a104_screen', label: '综合屏', type: 'screen', online: true },
+    { device_id: 'dev_a104_door', label: '前门门禁', type: 'door', online: true },
+    { device_id: 'dev_a104_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
+  spc_std_a201: [
+    { device_id: 'dev_a201_light', label: '教室照明', type: 'light', online: true },
+    { device_id: 'dev_a201_sign', label: '电子班牌', type: 'sign', online: false },
+    { device_id: 'dev_a201_screen', label: '综合屏', type: 'screen', online: true },
+    { device_id: 'dev_a201_door', label: '前门门禁', type: 'door', online: true },
+    { device_id: 'dev_a201_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
+  spc_std_a202: [
+    { device_id: 'dev_a202_light', label: '教室照明', type: 'light', online: true },
+    { device_id: 'dev_a202_sign', label: '电子班牌', type: 'sign', online: true },
+    { device_id: 'dev_a202_screen', label: '综合屏', type: 'screen', online: true },
+    { device_id: 'dev_a202_door', label: '前门门禁', type: 'door', online: true },
+    { device_id: 'dev_a202_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
+  spc_std_b301: [
+    { device_id: 'dev_b301_light', label: '教室照明', type: 'light', online: true },
+    { device_id: 'dev_b301_sign', label: '电子班牌', type: 'sign', online: true },
+    { device_id: 'dev_b301_screen', label: '综合屏', type: 'screen', online: true },
+    { device_id: 'dev_b301_door', label: '后门门禁', type: 'door', online: false },
+  ],
+  spc_lec_2: [
+    { device_id: 'dev_lec2_main', label: '学术厅主屏', type: 'screen', online: true },
+    { device_id: 'dev_lec2_side', label: '学术厅副屏', type: 'screen', online: true },
+    { device_id: 'dev_lec2_light', label: '报告厅照明', type: 'light', online: true },
+    { device_id: 'dev_lec2_door', label: '入口门禁', type: 'door', online: true },
+    { device_id: 'dev_lec2_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
+  spc_lec_3: [
+    { device_id: 'dev_lec3_main', label: '阶梯教室主屏', type: 'screen', online: false },
+    { device_id: 'dev_lec3_light', label: '阶梯教室照明', type: 'light', online: true },
+    { device_id: 'dev_lec3_door', label: '入口门禁', type: 'door', online: true },
+    { device_id: 'dev_lec3_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
+  spc_office_2: [
+    { device_id: 'dev_of2_light', label: '办公区照明', type: 'light', online: true },
+    { device_id: 'dev_of2_door', label: '办公室门禁', type: 'door', online: true },
+    { device_id: 'dev_of2_sens', label: '温湿度传感器', type: 'sensor', online: true },
+  ],
+  spc_lab_2: [
+    { device_id: 'dev_lab2_light', label: '实验室照明', type: 'light', online: true },
+    { device_id: 'dev_lab2_door', label: '实验室门禁', type: 'door', online: true },
+    { device_id: 'dev_lab2_sens', label: '环境传感器', type: 'sensor', online: false },
+  ],
+  spc_lab_3: [
+    { device_id: 'dev_lab3_light', label: '实验室照明', type: 'light', online: true },
+    { device_id: 'dev_lab3_door', label: '实验室门禁', type: 'door', online: true },
+    { device_id: 'dev_lab3_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
+  spc_lib_2: [
+    { device_id: 'dev_lib2_light', label: '阅览室照明', type: 'light', online: true },
+    { device_id: 'dev_lib2_screen', label: '查询终端大屏', type: 'screen', online: true },
+    { device_id: 'dev_lib2_door', label: '阅览室门禁', type: 'door', online: true },
+    { device_id: 'dev_lib2_sens', label: '环境传感器', type: 'sensor', online: true },
+  ],
 }
 
 // 设备开关态（与"在线/离线"连通性区分）：device_id -> on/off。executeScene/control 更新。
@@ -89,7 +168,7 @@ function toDeviceDoc(dev, spaceId) {
     d.device_type = 'zigbee'
     d.zb_type = 'sensor'
     d.gateway_id = 'dev_gw_' + spaceId
-    d.app = JSON.stringify({ temperature: 25.1, humidity: 60, co2: 800 })
+    d.app = JSON.stringify({ temperature: 25.1, humidity: 60, co2: 800, pm25: 18 })
   } else if (t === 'light' || t === 'door') {
     d.device_type = 'zigbee'
     d.zb_type = 'switch'
@@ -104,6 +183,15 @@ function toDeviceDoc(dev, spaceId) {
     d.info = '{}'
   }
   return d
+}
+
+// 反查设备原始类型（toDeviceDoc 会把类型改写成网关字段，这里还原成 mock 的类型键）。
+function devRawType(doc) {
+  if (doc.device_type === 'fuhe-board') return 'sign'
+  if (doc.device_type === 'fuhe-screen') return 'screen'
+  if (doc.zb_role) return doc.zb_role
+  if (doc.zb_type === 'sensor') return 'sensor'
+  return ''
 }
 
 // 告警 mock 的 created_at 用 ISO-8601 字符串，与后端 TIMESTAMPTZ 返回对齐。
@@ -220,6 +308,61 @@ const alerts = [
     device_label: '后门门禁',
     created_at: agoIso(1000 * 60 * 360),
   },
+  {
+    alert_id: 'alt_11',
+    space_id: 'spc_std_a103',
+    event_type: 'device_offline',
+    status: 'unhandled',
+    operator_id: '',
+    remark: '',
+    device_id: 'dev_a103_screen',
+    device_label: '综合屏',
+    created_at: agoIso(1000 * 60 * 12),
+  },
+  {
+    alert_id: 'alt_12',
+    space_id: 'spc_std_a201',
+    event_type: 'device_offline',
+    status: 'handling',
+    operator_id: 'u_admin_1',
+    remark: '已联系厂商更换班牌网关',
+    device_id: 'dev_a201_sign',
+    device_label: '电子班牌',
+    created_at: agoIso(1000 * 60 * 50),
+  },
+  {
+    alert_id: 'alt_13',
+    space_id: 'spc_lec_3',
+    event_type: 'device_offline',
+    status: 'unhandled',
+    operator_id: '',
+    remark: '',
+    device_id: 'dev_lec3_main',
+    device_label: '阶梯教室主屏',
+    created_at: agoIso(1000 * 60 * 95),
+  },
+  {
+    alert_id: 'alt_14',
+    space_id: 'spc_std_a104',
+    event_type: 'sensor_threshold',
+    status: 'unhandled',
+    operator_id: '',
+    remark: '',
+    device_id: '',
+    device_label: '',
+    created_at: agoIso(1000 * 60 * 20),
+  },
+  {
+    alert_id: 'alt_15',
+    space_id: 'spc_lab_2',
+    event_type: 'device_offline',
+    status: 'unhandled',
+    operator_id: '',
+    remark: '',
+    device_id: 'dev_lab2_sens',
+    device_label: '环境传感器',
+    created_at: agoIso(1000 * 60 * 240),
+  },
 ]
 
 // 演示账号库：与 wechat-gateway/scripts/mock-go-backend.py 的 ACCOUNTS 对齐。
@@ -258,6 +401,11 @@ let opLogId = 3
 // 门禁白名单 mock（7.5③）：{space_id, device_id, label}。mark/unmark 就地增删。
 const doorDevices = []
 
+// 通知目标绑定 mock：{channel, user_id, external_id, external_extra, updated_at}。
+// channel 枚举对齐 NotifyBindingService.cpp 的 kKnownChannels（不含 wechat_oa）。
+const KNOWN_CHANNELS = ['wechat_miniapp', 'sms', 'dingtalk', 'wecom']
+const notifyBindings = []
+
 // 空间类型 mock（对齐 format.js SPACE_TYPES + migration_v15.sql 种子）。
 const spaceTypes = [
   { code: 'standard', name: '标准教室', sort_order: 0, enabled: true, icon: '' },
@@ -277,10 +425,15 @@ const activeSceneBySpace = {}
 const seededSpaces = new Set()
 
 // 空间授权：与网关 main.cpp 的 user_spaces seed 对齐（admin 全量，教师按绑定）。
+// 注意：u_teacher_2（王老师）在网关 seed 里只绑 spc_b7bee44d，这里多绑
+// A101/A102 两个标准教室，仅为演示「我的教室」页的切换教室功能；
+// 真实模式下教室列表由网关按绑定返回，以此 mock 为准的演示不受影响。
 const USER_SPACES = {
-  u_admin_1: ['spc_a8acdd5c', 'spc_std_a102', 'spc_b7bee44d', 'spc_office_1', 'spc_gym_1', 'spc_lab_1', 'spc_lib_1', 'spc_canteen_1'],
-  u_teacher_1: ['spc_a8acdd5c', 'spc_std_a102', 'spc_office_1'],
-  u_teacher_2: ['spc_b7bee44d'],
+  // 管理员默认拥有全部空间（新增教室自动包含，不用逐个补 id）
+  u_admin_1: spaces.map((s) => s.space_id),
+  // 教师按绑定：李老师带 3 个标准教室 + 办公室，王老师主要用报告厅
+  u_teacher_1: ['spc_a8acdd5c', 'spc_std_a102', 'spc_std_a103', 'spc_std_a104', 'spc_office_1'],
+  u_teacher_2: ['spc_b7bee44d', 'spc_lec_2', 'spc_a8acdd5c', 'spc_std_a103'],
 }
 
 // 教师名单（从 ACCOUNTS 派生，供绑定管理页展示）。
@@ -296,11 +449,41 @@ function todayStr() {
 }
 
 // 进出记录 mock：脱敏字段（姓名/时间/教室/结果/方式），与网关 access_records 对齐。
+// 每间教室预置多条，便于演示「今日进出」卡片的收起/查看全部（默认收起显示 2 行）。
 const ACCESS_RECORDS = [
-  { name: '李老师', time: `${todayStr()}T08:12:00`, space_id: 'spc_a8acdd5c', result: 'login', auth_type: 'face' },
-  { name: '陌生人', time: `${todayStr()}T08:15:00`, space_id: 'spc_a8acdd5c', result: 'denied', auth_type: 'face' },
+  // 多媒体报告厅
   { name: '王老师', time: `${todayStr()}T08:20:00`, space_id: 'spc_b7bee44d', result: 'login', auth_type: 'face' },
   { name: '王老师', time: `${todayStr()}T08:25:00`, space_id: 'spc_b7bee44d', result: 'login', auth_type: 'card' },
+  { name: '张老师', time: `${todayStr()}T09:05:00`, space_id: 'spc_b7bee44d', result: 'login', auth_type: 'face' },
+  { name: '李老师', time: `${todayStr()}T09:30:00`, space_id: 'spc_b7bee44d', result: 'login', auth_type: 'face' },
+  { name: '陈教授', time: `${todayStr()}T10:00:00`, space_id: 'spc_b7bee44d', result: 'login', auth_type: 'face' },
+  { name: '学生甲', time: `${todayStr()}T10:15:00`, space_id: 'spc_b7bee44d', result: 'login', auth_type: 'card' },
+  { name: '陌生人', time: `${todayStr()}T11:40:00`, space_id: 'spc_b7bee44d', result: 'denied', auth_type: 'face' },
+  { name: '保洁王姨', time: `${todayStr()}T12:30:00`, space_id: 'spc_b7bee44d', result: 'login', auth_type: 'card' },
+  // A101 标准教室
+  { name: '李老师', time: `${todayStr()}T08:12:00`, space_id: 'spc_a8acdd5c', result: 'login', auth_type: 'face' },
+  { name: '陌生人', time: `${todayStr()}T08:15:00`, space_id: 'spc_a8acdd5c', result: 'denied', auth_type: 'face' },
+  { name: '张老师', time: `${todayStr()}T09:10:00`, space_id: 'spc_a8acdd5c', result: 'login', auth_type: 'face' },
+  { name: '王同学', time: `${todayStr()}T10:30:00`, space_id: 'spc_a8acdd5c', result: 'login', auth_type: 'card' },
+  { name: '刘老师', time: `${todayStr()}T13:20:00`, space_id: 'spc_a8acdd5c', result: 'login', auth_type: 'face' },
+  // A102 标准教室
+  { name: '赵老师', time: `${todayStr()}T08:40:00`, space_id: 'spc_std_a102', result: 'login', auth_type: 'face' },
+  { name: '孙同学', time: `${todayStr()}T09:50:00`, space_id: 'spc_std_a102', result: 'login', auth_type: 'card' },
+  // A103 / A104 / B301 标准教室
+  { name: '李老师', time: `${todayStr()}T08:05:00`, space_id: 'spc_std_a103', result: 'login', auth_type: 'face' },
+  { name: '陈同学', time: `${todayStr()}T09:20:00`, space_id: 'spc_std_a103', result: 'login', auth_type: 'card' },
+  { name: '王老师', time: `${todayStr()}T08:30:00`, space_id: 'spc_std_a104', result: 'login', auth_type: 'face' },
+  { name: '周同学', time: `${todayStr()}T10:40:00`, space_id: 'spc_std_a104', result: 'login', auth_type: 'face' },
+  { name: '郑老师', time: `${todayStr()}T13:45:00`, space_id: 'spc_std_b301', result: 'login', auth_type: 'card' },
+  // 学术报告厅 / 阶梯教室
+  { name: '张老师', time: `${todayStr()}T14:10:00`, space_id: 'spc_lec_2', result: 'login', auth_type: 'face' },
+  { name: '陌生人', time: `${todayStr()}T14:25:00`, space_id: 'spc_lec_2', result: 'denied', auth_type: 'face' },
+  { name: '刘老师', time: `${todayStr()}T15:00:00`, space_id: 'spc_lec_3', result: 'login', auth_type: 'card' },
+  // 实验室 / 阅览室
+  { name: '孙老师', time: `${todayStr()}T09:35:00`, space_id: 'spc_lab_2', result: 'login', auth_type: 'face' },
+  { name: '吴同学', time: `${todayStr()}T11:05:00`, space_id: 'spc_lib_2', result: 'login', auth_type: 'card' },
+  // 办公室
+  { name: '李老师', time: `${todayStr()}T14:00:00`, space_id: 'spc_office_1', result: 'login', auth_type: 'face' },
 ]
 
 // 登录态直接复用 store（唯一来源），避免 mock 本地再存一份导致与页面登录态漂移。
@@ -310,6 +493,269 @@ function currentUser() {
 }
 
 const delay = (data, ms = 250) => new Promise((resolve) => setTimeout(() => resolve(data), ms))
+
+// ---------------------------------------------------------------------------
+// AI 助手 mock
+// 真实网关的 AI 走 LLM + 工具调用（AiService / AiTools）；本地 mock 用意图匹配
+// + 现有 mock 数据生成回复，让不启后端也能完整演示 AI 助手链路
+// （对话 / 新建会话 / 历史回填 / 删除会话），返回结构与网关完全一致。
+// ---------------------------------------------------------------------------
+const aiConversations = []
+let aiConvSeq = 0
+
+const AI_DEVICE_TYPE = {
+  light: '照明',
+  sign: '电子班牌',
+  screen: '综合屏',
+  door: '门禁',
+  sensor: '传感器',
+}
+
+// 设备口语别名：用户说「灯」要能命中「教室照明」。
+// 只有类型名映射的话，必须一字不差念「照明」，说「灯」就匹配不到。
+const AI_DEVICE_ALIAS = {
+  light: ['灯', '灯光', '电灯', '照明灯', '灯管', '亮灯', '开灯', '关灯'],
+  sign: ['班牌', '门牌', '班牌机', '牌子'],
+  screen: ['屏', '大屏', '屏幕', '显示器', '一体机'],
+  door: ['门', '门锁', '门禁', '开门', '关门'],
+  sensor: ['传感器', '温湿度', '二氧化碳', '环境数据', '探头'],
+}
+
+// 设备目标匹配，三级回退：全名 → 类型名 → 口语别名。
+function aiMatchDevice(devList, t) {
+  const byLabel = devList.find((d) => t.includes(d.label))
+  if (byLabel) return byLabel
+  const byType = devList.find((d) => {
+    const name = AI_DEVICE_TYPE[devRawType(d)]
+    return name && t.includes(name)
+  })
+  if (byType) return byType
+  return devList.find((d) => {
+    const keys = AI_DEVICE_ALIAS[devRawType(d)] || []
+    return keys.some((k) => t.includes(k))
+  })
+}
+
+const AI_EVENT_TYPE = {
+  device_offline: '设备离线',
+  peripheral_offline: '外设离线',
+  sensor_threshold: '传感器阈值告警',
+  face_login_failed: '人脸识别失败',
+}
+
+const AI_ALERT_STATUS = {
+  unhandled: '未处理',
+  handling: '处理中',
+  resolved: '已处理',
+}
+
+const AI_AUTH_TYPE = { face: '人脸', card: '刷卡' }
+
+// 当前登录用户可访问的空间（admin 全量，teacher 按绑定）。
+function aiAccessibleSpaces() {
+  const u = currentUser()
+  if (!u) return []
+  if (u.role === 'admin') return spaces.filter((s) => s.enabled).map((s) => ({ ...s }))
+  const allowed = USER_SPACES[u.user_id] || []
+  return allowed
+    .map((id) => spaces.find((s) => s.space_id === id && s.enabled))
+    .filter(Boolean)
+    .map((s) => ({ ...s }))
+}
+
+// 空间名匹配：编号（A101/A102）优先，其次名称关键词（报告厅/办公室/实验室…）。
+// pool 传 spaces 表示在全部空间里找（用于识别「无权限访问」的越权提问）。
+function aiFindSpace(text, pool) {
+  const t = String(text || '').toUpperCase()
+  const list = pool || spaces
+  for (const s of list) {
+    const m = s.name.match(/[A-Z]+\d+/)
+    if (m && t.includes(m[0].toUpperCase())) return s
+  }
+  for (const s of list) {
+    const base = s.name.replace(/教室|房间/g, '')
+    if (!base) continue
+    for (let i = 0; i < base.length - 1; i++) {
+      const kw = base.slice(i)
+      if (/^\d+$/.test(kw)) continue // 纯数字关键词太容易误命中
+      if (t.includes(kw.toUpperCase())) return s
+    }
+  }
+  return null
+}
+
+function aiSpaceTypeName(code) {
+  const t = spaceTypes.find((x) => x.code === code)
+  return t ? t.name : ''
+}
+
+function aiAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.round(diff / 60000)
+  if (m < 1) return '刚刚'
+  if (m < 60) return m + ' 分钟前'
+  const h = Math.round(m / 60)
+  if (h < 24) return h + ' 小时前'
+  return Math.round(h / 24) + ' 天前'
+}
+
+// 懒种默认场景（与 mockApi.scenes 同逻辑）。
+function aiEnsureScenes(spaceId) {
+  if (seededSpaces.has(spaceId)) return
+  seededSpaces.add(spaceId)
+  scenes.push({ scene_id: 'scn_all_on_' + spaceId, space_id: spaceId, name: '开启模式', kind: 'all_on', device_states: [] })
+  scenes.push({ scene_id: 'scn_all_off_' + spaceId, space_id: spaceId, name: '离开模式', kind: 'all_off', device_states: [] })
+}
+
+// 场景执行（与 mockApi.executeScene 同语义：改开关态 + 记激活场景）。
+function aiRunScene(spaceId, kind) {
+  aiEnsureScenes(spaceId)
+  const s = scenes.find((x) => x.space_id === spaceId && x.kind === kind)
+  if (!s) return null
+  const cmd = kind === 'all_on' ? 'on' : 'off'
+  const results = []
+  ;(devices[spaceId] || []).forEach((dev) => {
+    if (dev.type !== 'sensor' && dev.type !== 'door') {
+      switchStates[dev.device_id] = cmd
+      results.push({ device_id: dev.device_id, command: cmd, status: 200 })
+    }
+  })
+  activeSceneBySpace[spaceId] = s.scene_id
+  return { scene: s, applied: results.length, results }
+}
+
+// 单设备开关（门禁走二次确认，不代开）。
+function aiRunDevice(spaceId, deviceId, command) {
+  const dev = (devices[spaceId] || []).find((d) => d.device_id === deviceId)
+  if (!dev) return null
+  if (dev.type === 'door') {
+    return { device: dev, needConfirm: true }
+  }
+  switchStates[deviceId] = command
+  if (spaceId) delete activeSceneBySpace[spaceId]
+  return { device: dev, applied: true }
+}
+
+// 意图匹配 + 数据组装，产出 AI 回复正文。
+function aiComposeReply(text) {
+  const u = currentUser()
+  if (!u) return '当前未登录，无法查询教室数据。'
+  const t = String(text || '')
+  const allowed = aiAccessibleSpaces()
+  if (!allowed.length) return '当前账号没有可访问的教室，请先在「我的教室」里绑定教室。'
+
+  // 提到但无权访问的空间 → 明确拒绝，不泄露数据。
+  const mentioned = aiFindSpace(t)
+  if (mentioned && !allowed.some((s) => s.space_id === mentioned.space_id)) {
+    return `「${mentioned.name}」不在你的授权范围内，我无法查看该教室的数据。`
+  }
+  const space = aiFindSpace(t, allowed) || allowed[0]
+  const spaceName = space.name
+  const devList = (devices[space.space_id] || []).map((d) => toDeviceDoc(d, space.space_id))
+  const typeName = aiSpaceTypeName(space.type)
+
+  // 1) 执行场景 / 模式
+  if (/(执行|运行|下发|启动|开启|打开)/.test(t) && /(模式|场景)/.test(t)) {
+    const kind = /(离开|关闭|下课)/.test(t) ? 'all_off' : 'all_on'
+    const r = aiRunScene(space.space_id, kind)
+    if (!r) return `${spaceName}还没有可用的场景，请先在「设备控制」页创建。`
+    const names = r.results
+      .map((x) => {
+        const d = (devices[space.space_id] || []).find((y) => y.device_id === x.device_id)
+        return d ? d.label : x.device_id
+      })
+      .join('、')
+    return `已在 ${spaceName} 执行「${r.scene.name}」，共下发 ${r.applied} 台设备：${names || '无'}。门禁与传感器不在场景控制范围内。`
+  }
+
+  // 2) 场景列表
+  if (/(场景|模式)/.test(t)) {
+    aiEnsureScenes(space.space_id)
+    const list = scenes.filter((s) => s.space_id === space.space_id)
+    if (!list.length) return `${spaceName}目前没有配置任何场景。`
+    const lines = list.map((s, i) => `${i + 1}. ${s.name}（${s.kind === 'all_on' ? '全部开启' : s.kind === 'all_off' ? '全部关闭' : '自定义'}）`)
+    return `${spaceName}共有 ${list.length} 个场景：\n${lines.join('\n')}`
+  }
+
+  // 3) 告警
+  if (/(告警|报警|异常|离线提醒|报警记录)/.test(t)) {
+    const list = alerts
+      .filter((a) => u.role === 'admin' || allowed.some((s) => s.space_id === a.space_id))
+      .slice()
+      .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+      .slice(0, 5)
+    if (!list.length) return '当前没有告警记录。'
+    const lines = list.map((a, i) => {
+      const sp = spaces.find((s) => s.space_id === a.space_id)
+      const what = a.device_label || (AI_EVENT_TYPE[a.event_type] || a.event_type)
+      const room = sp ? sp.name : '未知教室'
+      return `${i + 1}. [${AI_ALERT_STATUS[a.status] || a.status}] ${what} · ${room} · ${aiAgo(a.created_at)}`
+    })
+    const unhandled = list.filter((a) => a.status === 'unhandled').length
+    return `最近 ${list.length} 条告警（其中 ${unhandled} 条未处理）：\n${lines.join('\n')}`
+  }
+
+  // 4) 进出记录
+  if (/(进出|通行|刷卡|人脸|考勤|记录)/.test(t)) {
+    const list = ACCESS_RECORDS.filter((r) => u.role === 'admin' || allowed.some((s) => s.space_id === r.space_id))
+      .slice()
+      .sort((a, b) => (a.time < b.time ? 1 : -1))
+      .slice(0, 8)
+    if (!list.length) return '今天暂时没有进出记录。'
+    const lines = list.map((r, i) => {
+      const sp = spaces.find((s) => s.space_id === r.space_id)
+      const room = sp ? sp.name : '未知教室'
+      const res = r.result === 'login' ? '成功' : '拒绝'
+      return `${i + 1}. ${r.time.slice(11, 16)} ${r.name} · ${room} · ${AI_AUTH_TYPE[r.auth_type] || r.auth_type} · ${res}`
+    })
+    const denied = list.filter((r) => r.result === 'denied').length
+    return `今天的进出记录共 ${list.length} 条（拒绝 ${denied} 条），最近几条：\n${lines.join('\n')}`
+  }
+
+  // 5) 单设备开关（先于设备状态判定，否则「打开照明」会被当成状态查询）
+  if (/(打开|开启|关闭|熄灭|启动|开灯|关灯)/.test(t)) {
+    const cmd = /(关闭|熄灭|关灯|关)/.test(t) ? 'off' : 'on'
+    const target = aiMatchDevice(devList, t)
+    if (!target) {
+      return `${spaceName}里没找到你说的设备。当前可选：${devList.map((d) => d.label).join('、')}。`
+    }
+    const r = aiRunDevice(space.space_id, target.device_id, cmd)
+    if (r && r.needConfirm) {
+      return `「${target.label}」属于门禁，出于安全我不能直接开门，请到「设备控制」页做二次确认。`
+    }
+    return `已把 ${spaceName} 的「${target.label}」设为${cmd === 'on' ? '开启' : '关闭'}。`
+  }
+
+  // 6) 设备状态
+  if (/(设备|在线|离线|装置|摄像头|屏幕|照明|灯)/.test(t)) {
+    const online = devList.filter((d) => d.status === 'online')
+    const offline = devList.filter((d) => d.status !== 'online')
+    const on = devList.filter((d) => d.app === 'on')
+    let out = `${spaceName}（${typeName}）共 ${devList.length} 台设备：${online.length} 台在线、${offline.length} 台离线。`
+    if (online.length) out += `\n在线：${online.map((d) => d.label).join('、')}`
+    if (offline.length) out += `\n离线：${offline.map((d) => d.label).join('、')}`
+    if (on.length) out += `\n当前已开启：${on.map((d) => d.label).join('、')}`
+    return out
+  }
+
+  // 7) 教室 / 空间列表
+  if (/(教室|空间|列表|有哪些|列出|能访问|我能)/.test(t)) {
+    const lines = allowed.map((s, i) => `${i + 1}. ${s.name}（${aiSpaceTypeName(s.type)}）`)
+    return `你当前可访问 ${allowed.length} 个教室：\n${lines.join('\n')}`
+  }
+
+  // 8) 兜底
+  return [
+    '我可以帮你做这些事：',
+    '· 列出你能访问的教室',
+    '· 查询某间教室的设备在线状态',
+    '· 查看最近的告警',
+    '· 查询今天的进出记录',
+    '· 列出教室场景、执行「开启模式 / 离开模式」',
+    '· 开关单台设备（门禁需在小程序里二次确认）',
+    '试试问「A101 有哪些设备在线？」',
+  ].join('\n')
+}
 
 export const mockApi = {
   // 密码登录：校验账号 + 密码，返回对应的真实身份（不再是「其它账号都当李老师」）。
@@ -327,7 +773,8 @@ export const mockApi = {
   me() {
     const u = currentUser()
     if (!u) return Promise.reject(new Error('未登录'))
-    return delay({ user_id: u.user_id, role: u.role })
+    // 对齐 GET /api/miniapp/me：{user_id, role, name}（未绑定时 name 为空串）。
+    return delay({ user_id: u.user_id, role: u.role, name: u.name || '' })
   },
 
   // 空间：按账号的 user_spaces 授权返回；admin 全量，教师只看自己被授权的教室
@@ -339,7 +786,14 @@ export const mockApi = {
       return delay(spaces.filter((s) => s.enabled).map((s) => ({ ...s })))
     }
     const allowed = USER_SPACES[u.user_id] || []
-    return delay(spaces.filter((s) => s.enabled && allowed.includes(s.space_id)).map((s) => ({ ...s })))
+    // 按绑定顺序返回：USER_SPACES 的第一个即教师登录后的默认教室
+    // （王老师默认落在「多媒体报告厅」，与网关单绑定时一致）。
+    return delay(
+      allowed
+        .map((id) => spaces.find((s) => s.space_id === id && s.enabled))
+        .filter(Boolean)
+        .map((s) => ({ ...s }))
+    )
   },
 
   // 设备：按 space_id 返回；访问未授权空间会被拒
@@ -473,6 +927,61 @@ export const mockApi = {
     return delay({ ok: true })
   },
 
+  // 通知目标绑定：仅 admin。对齐 NotifyBindingService：
+  // channel 必填且须在 wechat_miniapp|sms|dingtalk|wecom 内；GET 返回 {bindings:[...]}。
+  notifyBindings(channel) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可查看通知绑定'))
+    if (!channel) return Promise.reject(new Error('channel required'))
+    if (!KNOWN_CHANNELS.includes(channel)) return Promise.reject(new Error('unknown channel: ' + channel))
+    const list = notifyBindings
+      .filter((b) => b.channel === channel)
+      .map((b) => ({
+        user_id: b.user_id,
+        channel: b.channel,
+        external_id: b.external_id,
+        updated_at: b.updated_at,
+      }))
+    return delay({ bindings: list })
+  },
+
+  saveNotifyBinding(payload) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理通知绑定'))
+    const channel = (payload && payload.channel) || ''
+    const userId = (payload && payload.user_id) || ''
+    const externalId = (payload && payload.external_id) || ''
+    if (!KNOWN_CHANNELS.includes(channel)) return Promise.reject(new Error('unknown channel: ' + channel))
+    if (!userId || !externalId) return Promise.reject(new Error('user_id and external_id are required'))
+    const entry = {
+      channel,
+      user_id: userId,
+      external_id: externalId,
+      external_extra: (payload && payload.external_extra) || '',
+      updated_at: new Date().toISOString(),
+    }
+    const idx = notifyBindings.findIndex((b) => b.channel === channel && b.user_id === userId)
+    if (idx >= 0) notifyBindings[idx] = entry
+    else notifyBindings.push(entry)
+    return delay({ ok: true })
+  },
+
+  deleteNotifyBinding(channel, userId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    if (u.role !== 'admin') return Promise.reject(new Error('仅管理员可管理通知绑定'))
+    if (!channel || !userId) return Promise.reject(new Error('channel and user_id are required'))
+    const before = notifyBindings.length
+    for (let i = notifyBindings.length - 1; i >= 0; i--) {
+      if (notifyBindings[i].channel === channel && notifyBindings[i].user_id === userId) {
+        notifyBindings.splice(i, 1)
+      }
+    }
+    return delay({ ok: true, deleted: before - notifyBindings.length })
+  },
+
   // 场景：读登录可读（懒种默认开启/离开）；写 admin/teacher 按空间权限。
   scenes(spaceId) {
     const u = currentUser()
@@ -546,18 +1055,25 @@ export const mockApi = {
       if (!allowed.includes(s.space_id)) return Promise.reject(new Error('无权限访问该空间'))
     }
     // 更新设备开关态：custom 按 device_states；all_on/all_off 覆盖全部可控设备（除传感器/门禁）。
-    let applied = 0
+    // results[] = {device_id, command, status}（每设备下发 HTTP 状态，传输失败为 0），applied = results 长度。
+    const results = []
     if (s.kind === 'custom') {
-      s.device_states.forEach((x) => { switchStates[x.device_id] = x.command })
-      applied = s.device_states.length
+      s.device_states.forEach((x) => {
+        switchStates[x.device_id] = x.command
+        results.push({ device_id: x.device_id, command: x.command, status: 200 })
+      })
     } else {
       const cmd = s.kind === 'all_on' ? 'on' : 'off'
       ;(devices[s.space_id] || []).forEach((dev) => {
-        if (dev.type !== 'sensor' && dev.type !== 'door') { switchStates[dev.device_id] = cmd; applied++ }
+        if (dev.type !== 'sensor' && dev.type !== 'door') {
+          switchStates[dev.device_id] = cmd
+          results.push({ device_id: dev.device_id, command: cmd, status: 200 })
+        }
       })
     }
+    const applied = results.length
     activeSceneBySpace[s.space_id] = sceneId
-    return delay({ ok: true, scene_id: sceneId, space_id: s.space_id, applied, warning: '' })
+    return delay({ ok: true, scene_id: sceneId, space_id: s.space_id, applied, results, warning: '' })
   },
 
   // 订阅授权
@@ -567,8 +1083,10 @@ export const mockApi = {
   },
 
   getSubscriptions() {
-    if (!currentUser()) return Promise.reject(new Error('未登录'))
-    return delay({ ok: true, templates: {} })
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    // 对齐 GET /api/miniapp/subscribe：{user_id, templates:{<tid>:{active,quota}}}
+    return delay({ user_id: u.user_id, templates: {} })
   },
 
   // 订阅消息模板 ID（与网关 config 的 3 个唯一模板对齐：
@@ -855,5 +1373,79 @@ export const mockApi = {
       body.by_space_unhandled = Object.keys(bySpaceUnhandled).map((sid) => ({ space_id: sid, count: bySpaceUnhandled[sid] }))
     }
     return delay(body)
+  },
+
+  // ---- AI 助手（本地 mock，无需后端）----
+  // 与网关 AiController 的返回结构一一对应：
+  //   POST   /api/ai/chat           -> {reply, tool_calls, conversation_id}
+  //   GET    /api/ai/conversations  -> {conversations:[{conversation_id,title,created_at,updated_at}]}
+  //   GET    /api/ai/conversations/:id/messages -> {conversation_id, messages:[{role,content,created_at}]}
+  //   DELETE /api/ai/conversations/:id -> {conversation_id, deleted:true}
+  aiChat(messages, conversationId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const lastUser = (messages || []).filter((m) => m.role === 'user').pop()
+    const text = lastUser ? lastUser.content : ''
+    let conv = aiConversations.find((c) => c.conversation_id === conversationId)
+    if (!conv) {
+      conv = {
+        conversation_id: 'conv_' + ++aiConvSeq + '_' + Date.now(),
+        user_id: u.user_id,
+        title: (text || '新对话').slice(0, 16),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        messages: [],
+      }
+      aiConversations.unshift(conv)
+    }
+    const now = new Date().toISOString()
+    ;(messages || []).forEach((m) => {
+      conv.messages.push({ role: m.role, content: m.content, created_at: now })
+    })
+    const reply = aiComposeReply(text)
+    conv.messages.push({ role: 'assistant', content: reply, created_at: now })
+    conv.updated_at = now
+    return delay({ reply, tool_calls: [], conversation_id: conv.conversation_id }, 600)
+  },
+
+  aiConversations() {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const list = aiConversations
+      .filter((c) => c.user_id === u.user_id)
+      .map((c) => ({
+        conversation_id: c.conversation_id,
+        title: c.title,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+      }))
+    return delay({ conversations: list }, 200)
+  },
+
+  aiMessages(conversationId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const conv = aiConversations.find((c) => c.conversation_id === conversationId)
+    if (!conv) {
+      return Promise.reject(Object.assign(new Error('conversation not found'), { status: 404 }))
+    }
+    return delay(
+      {
+        conversation_id: conv.conversation_id,
+        messages: conv.messages.map((m) => ({ ...m })),
+      },
+      200
+    )
+  },
+
+  aiDeleteConversation(conversationId) {
+    const u = currentUser()
+    if (!u) return Promise.reject(new Error('未登录'))
+    const idx = aiConversations.findIndex((c) => c.conversation_id === conversationId)
+    if (idx < 0) {
+      return Promise.reject(Object.assign(new Error('conversation not found'), { status: 404 }))
+    }
+    aiConversations.splice(idx, 1)
+    return delay({ conversation_id: conversationId, deleted: true }, 200)
   },
 }

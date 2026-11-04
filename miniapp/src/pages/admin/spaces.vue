@@ -5,29 +5,41 @@
       <text class="t">教室管理</text>
       <text class="more more-action" @tap="openCreate">+ 新建教室</text>
     </view>
-    <text class="hint">新建教室后设备页即出现对应类型 tab（暂无设备，等边侧装好设备后自动出现）</text>
+    <text class="hint">点教室可进入详情：编辑教室信息、查看并控制该教室的设备</text>
 
-    <!-- 教室列表 -->
+    <!-- 教室列表：点整行进入教室详情（设备控制 + 信息编辑） -->
     <view v-if="spaces.length" class="list-group">
-      <view v-for="s in spaces" :key="s.space_id" class="list-cell space-cell" :class="{ 'is-off': !s.enabled }">
+      <view
+        v-for="s in spaces"
+        :key="s.space_id"
+        class="list-cell space-cell"
+        :class="{ 'is-off': !s.enabled }"
+        hover-class="cell-hover"
+        @tap="openDetail(s)"
+      >
         <view class="s-main">
           <view class="s-head">
             <view class="s-info">
               <text class="s-name">{{ s.name }}</text>
               <text class="s-sub">{{ typeName(s.type) }} · {{ s.space_id }}</text>
             </view>
-            <view class="s-enable">
+            <view class="s-enable" @tap.stop>
               <text class="s-enable-label">{{ s.enabled ? '已启用' : '已停用' }}</text>
-              <switch class="s-switch" :checked="s.enabled" color="#5b8def" @change="onToggle(s, $event)" />
+              <switch class="s-switch" :checked="s.enabled" color="#245e70" @change="onToggle(s, $event)" />
             </view>
           </view>
-          <view class="s-actions">
+          <view class="s-actions" @tap.stop>
             <view class="act-btn" @tap="openEdit(s)">
               <uni-icons type="compose" size="14" color="var(--text-2)" />
-              <text class="act-label">编辑</text>
+              <text class="act-label">编辑名称</text>
+            </view>
+            <view class="act-btn" @tap="openDetail(s)">
+              <uni-icons type="settings" size="14" color="var(--text-2)" />
+              <text class="act-label">设备管理</text>
             </view>
           </view>
         </view>
+        <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
       </view>
     </view>
     <EmptyState v-else title="暂无教室" desc="点右上角「新建教室」添加" icon="flag" />
@@ -128,6 +140,10 @@ export default {
       this.submitting = false
       this.sheetVisible = true
     },
+    /* 进入教室详情：查看设备并可控制开关，教室信息也在那里编辑 */
+    openDetail(s) {
+      uni.navigateTo({ url: '/pages/admin/space-detail?space_id=' + encodeURIComponent(s.space_id) })
+    },
     openEdit(s) {
       this.editing = s
       this.form = { name: s.name, type: s.type }
@@ -173,8 +189,8 @@ export default {
 <style scoped>
 .spaces {
   padding-top: 24rpx;
-  padding-left: 24rpx;
-  padding-right: 24rpx;
+  padding-left: 36rpx;
+  padding-right: 36rpx;
 }
 
 .more-action {
@@ -192,8 +208,7 @@ export default {
   margin-top: 4rpx;
 }
 .space-cell {
-  flex-direction: column;
-  align-items: stretch;
+  align-items: center;
 }
 .space-cell.is-off .s-name {
   color: var(--text-4);
@@ -252,7 +267,7 @@ export default {
   margin: 0 12rpx 0 0;
   background: var(--info-bg);
   border: 1rpx solid var(--info-border);
-  border-radius: 8rpx;
+  border-radius: 12rpx;
 }
 .act-label {
   margin-left: 6rpx;
@@ -319,7 +334,7 @@ export default {
   padding: 0 28rpx;
   background: var(--bg);
   border: 1rpx solid var(--border);
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   font-size: 30rpx;
 }
 .pick-field {
