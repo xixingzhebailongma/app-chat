@@ -29,14 +29,7 @@
     <EmptyState v-else title="暂无空间类型" desc="点右上角「新增类型」添加" icon="flag" />
 
     <!-- 新增/编辑弹层 -->
-    <view v-if="sheetVisible" class="mask" @tap="sheetVisible = false"></view>
-    <view class="sheet" :class="{ show: sheetVisible }">
-      <view class="sheet-head">
-        <text class="sheet-title">{{ editing ? '编辑类型' : '新增类型' }}</text>
-        <view class="sheet-close" @tap="sheetVisible = false">
-          <uni-icons type="close" size="18" color="var(--text-4)" />
-        </view>
-      </view>
+    <ActionSheet :visible="sheetVisible" :title="editing ? '编辑类型' : '新增类型'" @close="sheetVisible = false">
       <view class="field-row">
         <text class="field-label">类型 code</text>
         <input v-model="form.code" class="field" placeholder="如 lab / dorm" placeholder-class="ph" :disabled="!!editing" />
@@ -46,7 +39,7 @@
         <input v-model="form.name" class="field" placeholder="如 实验室 / 宿舍" placeholder-class="ph" />
       </view>
       <button class="btn btn-primary" :disabled="submitting || !canSubmit" @tap="confirm">保存</button>
-    </view>
+    </ActionSheet>
   </view>
 </template>
 
@@ -54,9 +47,10 @@
 import { api } from '../../api/index'
 import { store, isLoggedIn } from '../../store/index'
 import EmptyState from '../../components/EmptyState.vue'
+import ActionSheet from '../../components/ActionSheet.vue'
 
 export default {
-  components: { EmptyState },
+  components: { EmptyState, ActionSheet },
   data() {
     return {
       store,
@@ -208,48 +202,7 @@ export default {
   color: var(--text-2);
 }
 
-/* 弹层 */
-.mask {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  /* 低于 uni-app picker 弹层(999)，否则弹层内嵌的选择器会被 sheet 遮挡 */
-  z-index: 990;
-  background: rgba(0, 0, 0, 0.5);
-}
-.sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 991;
-  background: #fff;
-  border-radius: 16rpx 16rpx 0 0;
-  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
-  transform: translateY(100%);
-  transition: transform 0.25s ease;
-}
-.sheet.show {
-  transform: translateY(0);
-}
-.sheet-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-}
-.sheet-title {
-  font-size: 36rpx;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.sheet-close {
-  display: flex;
-  align-items: center;
-  padding: 8rpx;
-}
+/* 表单 */
 .field-row {
   margin-bottom: 20rpx;
 }

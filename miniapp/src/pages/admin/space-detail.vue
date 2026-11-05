@@ -77,32 +77,22 @@
     />
 
     <!-- 控制弹层 -->
-    <view v-if="controlVisible" class="mask" @tap="controlVisible = false"></view>
-    <view class="sheet" :class="{ show: controlVisible }">
-      <view class="sheet-head">
-        <view class="sheet-head-main">
-          <text class="sheet-title">{{ controlTarget ? controlTarget.label : '' }}</text>
-          <text class="sheet-sub">{{ controlTarget ? deviceType(controlTarget.device_type, controlTarget.zb_type) + ' · ' + controlTarget.device_id : '' }}</text>
-        </view>
-        <view class="sheet-close" @tap="controlVisible = false"><uni-icons type="close" size="18" color="var(--text-4)" /></view>
-      </view>
+    <ActionSheet
+      :visible="controlVisible"
+      :title="controlTarget ? controlTarget.label : ''"
+      :sub="controlTarget ? deviceType(controlTarget.device_type, controlTarget.zb_type) + ' · ' + controlTarget.device_id : ''"
+      @close="controlVisible = false"
+    >
       <view class="cmd-grid">
         <view v-for="c in commands" :key="c.cmd" class="cmd" @tap="sendCommand(c)">
           <text class="cmd-label">{{ c.label }}</text>
         </view>
       </view>
       <text class="cmd-hint">下发成功仅代表指令已发出，最终状态以设备上报为准</text>
-    </view>
+    </ActionSheet>
 
     <!-- 编辑教室信息（名称 / 类型） -->
-    <view v-if="editVisible" class="mask" @tap="editVisible = false"></view>
-    <view class="sheet" :class="{ show: editVisible }">
-      <view class="sheet-head">
-        <text class="sheet-title">编辑教室信息</text>
-        <view class="sheet-close" @tap="editVisible = false">
-          <uni-icons type="close" size="18" color="var(--text-4)" />
-        </view>
-      </view>
+    <ActionSheet :visible="editVisible" title="编辑教室信息" @close="editVisible = false">
       <view class="field-row">
         <text class="field-label">教室名</text>
         <input v-model="form.name" class="field" placeholder="如 共用教室 / A201" placeholder-class="ph" />
@@ -117,7 +107,7 @@
         </picker>
       </view>
       <button class="btn btn-primary" :disabled="submitting || !canSubmit" @tap="confirmEdit">保存</button>
-    </view>
+    </ActionSheet>
   </view>
 </template>
 
@@ -130,9 +120,10 @@ import { controlErrorMessage } from '../../utils/controlError'
 import { parseSensorApp } from '../../utils/env'
 import { connectWs, closeWs } from '../../utils/ws'
 import EmptyState from '../../components/EmptyState.vue'
+import ActionSheet from '../../components/ActionSheet.vue'
 
 export default {
-  components: { EmptyState },
+  components: { EmptyState, ActionSheet },
   data() {
     return {
       spaceId: '',
@@ -496,56 +487,7 @@ export default {
   color: var(--text-4);
 }
 
-/* 弹层（与教室管理保持一致） */
-.mask {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 990;
-  background: rgba(0, 0, 0, 0.5);
-}
-.sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 991;
-  background: #fff;
-  border-radius: 16rpx 16rpx 0 0;
-  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
-  transform: translateY(100%);
-  transition: transform 0.25s ease;
-}
-.sheet.show {
-  transform: translateY(0);
-}
-.sheet-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-}
-.sheet-head-main {
-  display: flex;
-  flex-direction: column;
-  gap: 6rpx;
-}
-.sheet-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.sheet-sub {
-  font-size: 22rpx;
-  color: var(--text-3);
-}
-.sheet-close {
-  display: flex;
-  align-items: center;
-  padding: 8rpx;
-}
+/* 控制命令网格 */
 .cmd-grid {
   display: flex;
   margin: 8rpx 0 4rpx;

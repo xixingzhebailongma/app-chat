@@ -7,10 +7,22 @@
     </view>
     <text class="hint">点教室可进入详情：编辑教室信息、查看并控制该教室的设备</text>
 
+    <!-- 搜索 -->
+    <view class="search">
+      <view class="search-ico"><uni-icons type="search" size="18" color="var(--text-3)" /></view>
+      <input
+        v-model="keyword"
+        class="search-input"
+        placeholder="搜索教室名称 / 编号"
+        placeholder-class="ph"
+      />
+      <view v-if="keyword" class="search-clear" @tap="keyword = ''"><uni-icons type="clear" size="18" color="var(--text-4)" /></view>
+    </view>
+
     <!-- 教室列表：点整行进入教室详情（设备控制 + 信息编辑） -->
-    <view v-if="spaces.length" class="list-group">
+    <view v-if="filteredSpaces.length" class="list-group">
       <view
-        v-for="s in spaces"
+        v-for="s in filteredSpaces"
         :key="s.space_id"
         class="list-cell space-cell"
         :class="{ 'is-off': !s.enabled }"
@@ -24,35 +36,25 @@
               <text class="s-sub">{{ typeName(s.type) }} · {{ s.space_id }}</text>
             </view>
             <view class="s-enable" @tap.stop>
-              <text class="s-enable-label">{{ s.enabled ? '已启用' : '已停用' }}</text>
               <switch class="s-switch" :checked="s.enabled" color="#245e70" @change="onToggle(s, $event)" />
             </view>
           </view>
-          <view class="s-actions" @tap.stop>
-            <view class="act-btn" @tap="openEdit(s)">
+          <view class="s-foot">
+            <view class="act-btn" @tap.stop="openEdit(s)">
               <uni-icons type="compose" size="14" color="var(--text-2)" />
-              <text class="act-label">编辑名称</text>
+              <text class="act-label">编辑</text>
             </view>
-            <view class="act-btn" @tap="openDetail(s)">
-              <uni-icons type="settings" size="14" color="var(--text-2)" />
-              <text class="act-label">设备管理</text>
-            </view>
+            <text class="s-hint">点击进入设备管理</text>
           </view>
         </view>
         <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
       </view>
     </view>
+    <EmptyState v-else-if="keyword" title="未找到匹配教室" desc="请调整关键词后重试" />
     <EmptyState v-else title="暂无教室" desc="点右上角「新建教室」添加" icon="flag" />
 
     <!-- 新建/编辑弹层 -->
-    <view v-if="sheetVisible" class="mask" @tap="sheetVisible = false"></view>
-    <view class="sheet" :class="{ show: sheetVisible }">
-      <view class="sheet-head">
-        <text class="sheet-title">{{ editing ? '编辑教室' : '新建教室' }}</text>
-        <view class="sheet-close" @tap="sheetVisible = false">
-          <uni-icons type="close" size="18" color="var(--text-4)" />
-        </view>
-      </view>
+    <ActionSheet :visible="sheetVisible" :title="editing ? '编辑教室' : '新建教室'" @close="sheetVisible = false">
       <view class="field-row">
         <text class="field-label">教室名</text>
         <input v-model="form.name" class="field" placeholder="如 共用教室 / A201" placeholder-class="ph" />
@@ -67,7 +69,7 @@
         </picker>
       </view>
       <button class="btn btn-primary" :disabled="submitting || !canSubmit" @tap="confirm">保存</button>
-    </view>
+    </ActionSheet>
   </view>
 </template>
 
@@ -75,14 +77,16 @@
 import { api } from '../../api/index'
 import { store, isLoggedIn } from '../../store/index'
 import EmptyState from '../../components/EmptyState.vue'
+import ActionSheet from '../../components/ActionSheet.vue'
 
 export default {
-  components: { EmptyState },
+  components: { EmptyState, ActionSheet },
   data() {
     return {
       store,
       spaces: [],
       typeDefs: [],
+      keyword: '',
       sheetVisible: false,
       editing: null,
       form: { name: '', type: '' },
@@ -91,6 +95,13 @@ export default {
     }
   },
   computed: {
+    filteredSpaces() {
+      const k = this.keyword.trim().toLowerCase()
+      if (!k) return this.spaces
+      return this.spaces.filter(
+        (s) => (s.name || '').toLowerCase().includes(k) || (s.space_id || '').toLowerCase().includes(k)
+      )
+    },
     typeOptions() {
       return this.typeDefs.map((t) => ({ key: t.code, label: t.name }))
     },
@@ -203,6 +214,32 @@ export default {
   color: var(--text-4);
   line-height: 1.5;
 }
+.search {
+  display: flex;
+  align-items: center;
+  margin: 4rpx 0 16rpx;
+  padding: 0 28rpx;
+  height: 80rpx;
+  background: #fff;
+  border: 1rpx solid var(--border);
+  border-radius: 12rpx;
+}
+.search-ico {
+  display: flex;
+  align-items: center;
+  margin-right: 12rpx;
+}
+.search-input {
+  flex: 1;
+  height: 80rpx;
+  font-size: 28rpx;
+  color: var(--text-1);
+}
+.search-clear {
+  display: flex;
+  align-items: center;
+  padding: 8rpx;
+}
 
 .list-group {
   margin-top: 4rpx;
@@ -245,19 +282,20 @@ export default {
   align-items: center;
   flex-shrink: 0;
 }
-.s-enable-label {
-  margin-right: 8rpx;
-  font-size: 24rpx;
-  color: var(--text-3);
-}
 .s-switch {
   transform: scale(0.8);
   transform-origin: right center;
 }
-.s-actions {
+.s-foot {
   display: flex;
   align-items: center;
   margin-top: 16rpx;
+}
+.s-hint {
+  flex: 1;
+  text-align: right;
+  font-size: 22rpx;
+  color: var(--text-4);
 }
 .act-btn {
   display: flex;
@@ -278,48 +316,7 @@ export default {
   color: var(--danger);
 }
 
-/* 弹层 */
-.mask {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  /* 低于 uni-app picker 弹层(999)，否则弹层内嵌的选择器会被 sheet 遮挡 */
-  z-index: 990;
-  background: rgba(0, 0, 0, 0.5);
-}
-.sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 991;
-  background: #fff;
-  border-radius: 16rpx 16rpx 0 0;
-  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
-  transform: translateY(100%);
-  transition: transform 0.25s ease;
-}
-.sheet.show {
-  transform: translateY(0);
-}
-.sheet-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-}
-.sheet-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.sheet-close {
-  display: flex;
-  align-items: center;
-  padding: 8rpx;
-}
+/* 表单 */
 .field-row {
   margin-bottom: 20rpx;
 }

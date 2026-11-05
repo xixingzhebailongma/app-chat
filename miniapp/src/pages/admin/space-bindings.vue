@@ -34,14 +34,7 @@
     <EmptyState v-else title="暂无教师" desc="教师名单由 user_roles 同步" icon="person" />
 
     <!-- 绑定弹层 -->
-    <view v-if="sheetVisible" class="mask" @tap="sheetVisible = false"></view>
-    <view class="sheet" :class="{ show: sheetVisible }">
-      <view class="sheet-head">
-        <text class="sheet-title">绑定教室</text>
-        <view class="sheet-close" @tap="sheetVisible = false">
-          <uni-icons type="close" size="18" color="var(--text-4)" />
-        </view>
-      </view>
+    <ActionSheet :visible="sheetVisible" title="绑定教室" @close="sheetVisible = false">
       <picker
         mode="selector"
         :range="teacherTabs"
@@ -69,7 +62,7 @@
         :disabled="submitting || !canSubmit"
         @tap="confirmBind"
       >确认绑定</button>
-    </view>
+    </ActionSheet>
   </view>
 </template>
 
@@ -78,9 +71,10 @@ import { api } from '../../api/index'
 import { store, isLoggedIn } from '../../store/index'
 import StatusTag from '../../components/StatusTag.vue'
 import EmptyState from '../../components/EmptyState.vue'
+import ActionSheet from '../../components/ActionSheet.vue'
 
 export default {
-  components: { StatusTag, EmptyState },
+  components: { StatusTag, EmptyState, ActionSheet },
   data() {
     return {
       store,
@@ -289,48 +283,7 @@ export default {
   color: var(--text-4);
 }
 
-/* 弹层 */
-.mask {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  /* 低于 uni-app picker 弹层(999)，否则弹层内嵌的选择器会被 sheet 遮挡 */
-  z-index: 990;
-  background: rgba(0, 0, 0, 0.5);
-}
-.sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 991;
-  background: #fff;
-  border-radius: 16rpx 16rpx 0 0;
-  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
-  transform: translateY(100%);
-  transition: transform 0.25s ease;
-}
-.sheet.show {
-  transform: translateY(0);
-}
-.sheet-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-}
-.sheet-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.sheet-close {
-  display: flex;
-  align-items: center;
-  padding: 8rpx;
-}
+/* 绑定表单 */
 .pick {
   display: flex;
   align-items: center;

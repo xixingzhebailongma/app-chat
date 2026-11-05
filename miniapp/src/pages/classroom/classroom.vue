@@ -34,13 +34,21 @@
       <view class="cv__hero-rule" />
     </view>
 
-    <!-- 教室切换：一行下拉（原横向标签行教室一多就要横向找，改成一个下拉入口） -->
-    <view class="cv__space-bar" hover-class="cv__space-bar--press" :hover-stay-time="60" @tap="openSpaceSheet">
-      <text class="cv__space-bar-caps">CLASSROOM</text>
-      <text class="cv__space-bar-name">{{ currentSpace ? currentSpace.name : '请选择教室' }}</text>
-      <text class="cv__space-bar-count">{{ spaces.length }} 间</text>
-      <uni-icons type="arrow-down" size="14" color="var(--brand)" />
-    </view>
+    <!-- 教室切换：原生 selector 下拉，与「设备控制」的空间选择保持一致 -->
+    <picker
+      mode="selector"
+      :range="spaceTabs"
+      range-key="label"
+      :value="spaceIndex"
+      @change="onSpaceChange"
+    >
+      <view class="cv__space-bar" hover-class="cv__space-bar--press" :hover-stay-time="60">
+        <text class="cv__space-bar-caps">CLASSROOM</text>
+        <text class="cv__space-bar-name">{{ currentSpace ? currentSpace.name : '请选择教室' }}</text>
+        <text class="cv__space-bar-count">{{ spaces.length }} 间</text>
+        <uni-icons type="arrow-down" size="14" color="var(--brand)" />
+      </view>
+    </picker>
 
     <!-- 空间概览：设备按区归组，点阵直读在线状态（只读 devices，零接口改动） -->
     <view v-if="zones.length" class="cv__zones">
@@ -292,33 +300,6 @@
 
     <AppTabBar current="classroom" />
 
-    <!-- 切换教室弹层 -->
-    <view v-if="spaceSheetVisible" class="cv__space-mask" @tap="spaceSheetVisible = false"></view>
-    <view class="cv__space-sheet" :class="{ show: spaceSheetVisible }" @tap.stop>
-      <view class="cv__space-sheet-head">
-        <text class="cv__space-sheet-title">切换教室</text>
-        <view class="cv__space-sheet-close" @tap="spaceSheetVisible = false">
-          <uni-icons type="close" size="18" color="var(--text-4)" />
-        </view>
-      </view>
-      <view class="cv__space-list">
-        <view
-          v-for="s in spaces"
-          :key="s.space_id"
-          class="cv__space-item"
-          :class="{ active: s.space_id === current }"
-          @tap="switchSpace(s)"
-        >
-          <view class="cv__space-item-main">
-            <text class="cv__space-item-name">{{ s.name }}</text>
-            <text class="cv__space-item-type">{{ spaceTypeLabel(s.type) }}</text>
-          </view>
-          <view v-if="s.space_id === current" class="cv__space-item-cur">当前教室</view>
-          <uni-icons v-else type="arrow-right" size="14" color="var(--text-4)" />
-        </view>
-      </view>
-    </view>
-
     <!-- 场景编辑弹层 -->
     <view v-if="sceneSheetVisible" class="mask" @tap="sceneSheetVisible = false"></view>
     <view class="sheet" :class="{ show: sceneSheetVisible }">
@@ -396,7 +377,6 @@ export default {
       editMode: false,
       showPicker: false,
       wsConnected: true,
-      spaceSheetVisible: false,
       spaceSwitching: false,
       showSubGuide: false,
     }
@@ -404,6 +384,17 @@ export default {
   computed: {
     currentSpace() {
       return this.spaces.find((s) => s.space_id === this.current) || this.spaces[0] || null
+    },
+    // 下拉选项：名称 + 类型，与设备控制页的展示口径一致
+    spaceTabs() {
+      return this.spaces.map((s) => ({
+        key: s.space_id,
+        label: s.name + ' · ' + spaceTypeLabel(s.type),
+      }))
+    },
+    spaceIndex() {
+      const i = this.spaceTabs.findIndex((t) => t.key === this.current)
+      return i < 0 ? 0 : i
     },
     onlineCount() {
       return this.devices.filter((d) => d.status === 'online').length
@@ -856,18 +847,14 @@ export default {
         uni.stopPullDownRefresh()
       }
     },
-    openSpaceSheet() {
-      // 只有一个教室时无需切换，给出明确提示而非空列表
-      if (this.spaces.length <= 1) {
-        uni.showToast({ title: '当前账号下暂无其他教室', icon: 'none' })
-        return
-      }
-      this.spaceSheetVisible = true
+    onSpaceChange(e) {
+      const tab = this.spaceTabs[Number(e.detail.value)]
+      const s = tab && this.spaces.find((x) => x.space_id === tab.key)
+      if (s) this.switchSpace(s)
     },
     async switchSpace(s) {
       if (!s || this.spaceSwitching || s.space_id === this.current) return
       this.spaceSwitching = true
-      this.spaceSheetVisible = false
       // 重置上一个教室的瞬时态，避免编辑模式 / 场景弹层串到新教室
       this.editMode = false
       this.showPicker = false
@@ -2074,90 +2061,6 @@ export default {
   font-weight: 500;
   background: var(--bg-soft);
   border-radius: 999rpx;
-}
-
-/* ---------- 弹层：切换教室 ---------- */
-.cv__space-mask {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 1000;
-  background: rgba(17, 24, 39, 0.45);
-}
-.cv__space-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1001;
-  background: var(--bg-card);
-  border-radius: 32rpx 32rpx 0 0;
-  padding: 32rpx 32rpx 0;
-  transform: translateY(100%);
-  transition: transform 280ms cubic-bezier(0.25, 0.1, 0.25, 1);
-  max-height: 78vh;
-  overflow-y: auto;
-}
-.cv__space-sheet.show {
-  transform: translateY(0);
-}
-.cv__space-sheet-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8rpx;
-}
-.cv__space-sheet-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.cv__space-sheet-close {
-  display: flex;
-  align-items: center;
-  padding: 8rpx;
-}
-.cv__space-item {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  padding: 28rpx 4rpx;
-  border-bottom: 1rpx solid var(--bg-soft);
-}
-.cv__space-item:last-child {
-  border-bottom: none;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-}
-.cv__space-item-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  min-width: 0;
-}
-.cv__space-item-name {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: var(--text-1);
-}
-.cv__space-item-type {
-  font-size: 22rpx;
-  color: var(--text-3);
-}
-.cv__space-item.active .cv__space-item-name {
-  color: var(--brand);
-  font-weight: 600;
-}
-.cv__space-item-cur {
-  font-size: 22rpx;
-  font-weight: 500;
-  color: var(--brand);
-  background: rgba(36, 94, 112, 0.10);
-  border-radius: 999rpx;
-  padding: 6rpx 18rpx;
-  flex-shrink: 0;
 }
 
 /* ---------- 弹层：场景编辑 ---------- */

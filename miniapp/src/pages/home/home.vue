@@ -46,27 +46,28 @@
       </view>
     </view>
 
-    <!-- 管理入口（仅管理员） -->
-    <view v-if="store.role === 'admin'" class="list-group manage">
-      <view class="list-cell list-cell-center" hover-class="cell-hover" @tap="goManage('spaces')">
-        <view class="m-icon"><uni-icons type="home" size="20" color="var(--brand)" /></view>
-        <text class="m-label">教室管理</text>
-        <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
+    <!-- 管理入口（仅管理员）：2×2 网格，降低占地、突出总览 -->
+    <view v-if="store.role === 'admin'" class="manage">
+      <view class="section-title">
+        <text class="t">管理</text>
       </view>
-      <view class="list-cell list-cell-center" hover-class="cell-hover" @tap="goManage('bindings')">
-        <view class="m-icon"><uni-icons type="person" size="20" color="var(--brand)" /></view>
-        <text class="m-label">教师教室绑定</text>
-        <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
-      </view>
-      <view class="list-cell list-cell-center" hover-class="cell-hover" @tap="goManage('records')">
-        <view class="m-icon"><uni-icons type="flag" size="20" color="var(--brand)" /></view>
-        <text class="m-label">进出记录</text>
-        <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
-      </view>
-      <view class="list-cell list-cell-center" hover-class="cell-hover" @tap="goManage('space-types')">
-        <view class="m-icon"><uni-icons type="gear" size="20" color="var(--brand)" /></view>
-        <text class="m-label">空间类型</text>
-        <uni-icons type="arrow-right" size="14" color="var(--text-4)" />
+      <view class="manage-grid">
+        <view class="manage-item" hover-class="cell-hover" @tap="goManage('spaces')">
+          <view class="m-icon"><uni-icons type="home" size="20" color="var(--brand)" /></view>
+          <text class="m-label">教室管理</text>
+        </view>
+        <view class="manage-item" hover-class="cell-hover" @tap="goManage('bindings')">
+          <view class="m-icon"><uni-icons type="person" size="20" color="var(--brand)" /></view>
+          <text class="m-label">教师教室绑定</text>
+        </view>
+        <view class="manage-item" hover-class="cell-hover" @tap="goManage('records')">
+          <view class="m-icon"><uni-icons type="flag" size="20" color="var(--brand)" /></view>
+          <text class="m-label">进出记录</text>
+        </view>
+        <view class="manage-item" hover-class="cell-hover" @tap="goManage('space-types')">
+          <view class="m-icon"><uni-icons type="gear" size="20" color="var(--brand)" /></view>
+          <text class="m-label">空间类型</text>
+        </view>
       </view>
     </view>
 
@@ -590,15 +591,29 @@ export default {
   color: var(--success);
 }
 
-/* 管理入口（仅管理员） */
+/* 管理入口（仅管理员）：2×2 网格 */
 .manage {
   margin-top: 20rpx;
 }
+.manage-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.manage-item {
+  display: flex;
+  align-items: center;
+  width: calc(50% - 8rpx);
+  padding: 22rpx 24rpx;
+  background: linear-gradient(140deg, var(--bg-card), var(--bg-card-end));
+  border: 1rpx solid var(--border-light);
+  border-radius: var(--radius-item);
+}
 .m-icon {
-  width: 64rpx;
-  height: 64rpx;
+  width: 56rpx;
+  height: 56rpx;
   border-radius: 12rpx;
-  margin-right: 20rpx;
+  margin-right: 16rpx;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -607,8 +622,7 @@ export default {
   background: var(--brand-soft);
 }
 .m-label {
-  flex: 1;
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: var(--text-1);
 }
 

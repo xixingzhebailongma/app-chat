@@ -1,17 +1,6 @@
 <template>
   <view class="devices page-pad">
-    <!-- 空间类型（第一级） -->
-    <scroll-view scroll-x class="type-bar" :show-scrollbar="false">
-      <view
-        v-for="t in typeTabs"
-        :key="t.key"
-        class="type-pill"
-        :class="{ active: currentType === t.key }"
-        @tap="onTypeChange(t.key)"
-      >{{ t.label }}</view>
-    </scroll-view>
-
-    <!-- 空间选择（第二级） -->
+    <!-- 空间选择 -->
     <picker
       mode="selector"
       :range="spaceTabs"
@@ -236,6 +225,8 @@ import AppTabBar from '../../components/AppTabBar.vue'
 // 底部 tab 切换走的是 uni.reLaunch，页面会被整个销毁重建，data 全部重置。
 // 不把「上次看的空间类型 + 教室」落到 storage，切回来就退回默认教室。
 const VIEW_STATE_KEY = 'devices_view_state'
+// 与「我的教室」共享的当前空间：否则在教室页切换后，设备页仍会恢复自己记住的旧教室
+const SHARED_SPACE_KEY = 'sc_classroom_current_space'
 
 export default {
   components: { EmptyState, AppTabBar },
@@ -243,10 +234,7 @@ export default {
     return {
       store,
       spaces: [],
-      typeDefs: [],
-      currentType: '',
       current: 'all',
-      requestedType: '',
       requestedSpace: '',
       requestedDevice: '',
       devices: [],
@@ -262,26 +250,10 @@ export default {
     isAdmin() {
       return store.role === 'admin'
     },
-    typeTabs() {
-      const codes = [...new Set(this.spaces.map((s) => s.type))]
-      const byCode = {}
-      this.typeDefs.forEach((t) => { byCode[t.code] = t })
-      const known = codes.filter((c) => byCode[c])
-      const rest = codes.filter((c) => !byCode[c]).sort()
-      known.sort((a, b) => ((byCode[a].sort_order ?? 0) - (byCode[b].sort_order ?? 0)))
-      return known.concat(rest).map((c) => ({
-        key: c,
-        label: byCode[c] ? byCode[c].name : spaceTypeLabel(c),
-      }))
-    },
-    currentTypeLabel() {
-      const t = this.typeDefs.find((x) => x.code === this.currentType)
-      return t ? t.name : spaceTypeLabel(this.currentType)
-    },
-    // 下拉里直接列全部教室（原来只列当前类型下的教室，管理员的教室一多就得来回切类型找）
+    // 下拉直接列全部教室（管理员多教室时不用来回切类型找）
     spaceTabs() {
       const tabs = []
-      if (this.isAdmin) tabs.push({ key: 'all', label: '全部' + this.currentTypeLabel, type: '' })
+      if (this.isAdmin) tabs.push({ key: 'all', label: '全部教室', type: '' })
       this.spaces
         .slice()
         .sort((a, b) => String(a.type).localeCompare(String(b.type)) || String(a.name).localeCompare(String(b.name)))
@@ -385,7 +357,6 @@ export default {
     this._pageHidden = false
   },
   onLoad(options) {
-    this.requestedType = (options && options.type) || ''
     this.requestedSpace = (options && options.space_id) || ''
     this.requestedDevice = (options && options.device_id) || ''
   },
@@ -496,31 +467,26 @@ export default {
     },
     async load() {
       try {
-        const [spaces, typeDefs] = await Promise.all([api.spaces(), api.spaceTypes()])
+        const spaces = await api.spaces()
         this.spaces = spaces
-        this.typeDefs = typeDefs || []
         const saved = this.readViewState()
-        let type = this.typeTabs.length ? this.typeTabs[0].key : ''
-        if (saved.currentType && this.typeTabs.some((t) => t.key === saved.currentType)) {
-          type = saved.currentType
-        }
-        if (this.requestedType && this.typeTabs.some((t) => t.key === this.requestedType)) {
-          type = this.requestedType
-        }
-        this.currentType = type
-        this.requestedType = ''
         this.current = !this.isAdmin && spaces.length ? spaces[0].space_id : 'all'
-        // 优先恢复上次查看的教室；带 space_id 跳进来的（从「我的教室」点某个教室）优先级最高
+        // 「我的教室」里选中的空间优先：两个页面共用当前教室，切过去就跟着走
+        // 带 space_id 跳进来的（从「我的教室」点某个教室）优先级最高
+        const shared = spaces.find((s) => s.space_id === this.readSharedSpace())
         const savedSpace = saved.current
         const savedValid =
           savedSpace === 'all'
             ? this.isAdmin
             : spaces.some((s) => s.space_id === savedSpace)
-        if (savedValid) this.current = savedSpace
+        if (shared) {
+          this.current = shared.space_id
+        } else if (savedValid) {
+          this.current = savedSpace
+        }
         if (this.requestedSpace) {
           const s = spaces.find((x) => x.space_id === this.requestedSpace)
           if (s) {
-            this.currentType = s.type
             this.current = s.space_id
           }
         }
@@ -537,6 +503,13 @@ export default {
         uni.stopPullDownRefresh()
       }
     },
+    readSharedSpace() {
+      try {
+        return uni.getStorageSync(SHARED_SPACE_KEY) || ''
+      } catch (e) {
+        return ''
+      }
+    },
     /* 记住当前查看的空间类型 + 教室，供下次进入（tab 切换会重建页面）恢复 */
     readViewState() {
       try {
@@ -550,17 +523,14 @@ export default {
       try {
         uni.setStorageSync(VIEW_STATE_KEY, {
           current: this.current,
-          currentType: this.currentType,
         })
       } catch (e) {}
-    },
-    onTypeChange(key) {
-      if (key === this.currentType) return
-      this.currentType = key
-      const rooms = this.spaces.filter((s) => s.type === key)
-      this.current = !this.isAdmin && rooms.length ? rooms[0].space_id : 'all'
-      this.saveViewState()
-      this.fetchDevices()
+      // 反向同步：「我的教室」按同一空间恢复；"all"（管理员全部）不覆盖具体教室
+      if (this.current && this.current !== 'all') {
+        try {
+          uni.setStorageSync(SHARED_SPACE_KEY, this.current)
+        } catch (e) {}
+      }
     },
     async switchSpace(key) {
       this.current = key
@@ -575,15 +545,13 @@ export default {
     onSpaceChange(e) {
       const s = this.spaceTabs[Number(e.detail.value)]
       if (!s) return
-      // 选了具体教室就把类型筛选同步到它的类型，避免上方 pills 和实际查看的教室错位
-      if (s.type && s.type !== this.currentType) this.currentType = s.type
       this.switchSpace(s.key)
     },
     async fetchDevices() {
       try {
         const rooms =
           this.current === 'all'
-            ? this.spaces.filter((s) => s.type === this.currentType)
+            ? this.spaces
             : this.spaces.filter((s) => s.space_id === this.current)
         const lists = await Promise.all(rooms.map((s) => api.devices(s.space_id)))
         let out = []
@@ -741,30 +709,6 @@ export default {
     radial-gradient(ellipse at 30% -10%, var(--ambient-a), transparent 55%),
     radial-gradient(ellipse at 95% 70%, var(--ambient-b), transparent 52%),
     var(--bg-page);
-}
-
-/* 空间类型 */
-.type-bar {
-  white-space: nowrap;
-  margin: 0 36rpx 28rpx;
-}
-.type-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 56rpx;
-  padding: 0 26rpx;
-  margin-right: 14rpx;
-  background: #fff;
-  border: 1rpx solid var(--border);
-  border-radius: 999rpx;
-  font-size: 28rpx;
-  font-weight: 400;
-  color: var(--text-2);
-}
-.type-pill.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
 }
 
 /* 空间选择 */
